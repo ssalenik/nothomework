@@ -317,30 +317,84 @@ public class Node implements Comparable<Node> {
 	 * and forwardingTable of this node
 	 */
 	public void doDistanceVectorUpdate() {
-		// STEP 1: Fill in this method
-		
-		// loop through each possible destination
-		for (Node destination : this.getDestinations()) {
-			
-		}
-		
-		// check if the shortest (forwarding) path has changed
-		
-		// if so, update forwarding table and notify relevant neighbors
-	
 		// Loop over all possible destinations
 		// Do Bellman-Ford updates using this node's local info
 		// If something changed, notify this node's neighbors by calling notifyNeighbors()
+		
+		float bestCost, tempCost;	//used to find the lowest cost to destination; init as infinity	
+		Node bestNeighbor = null;	// used to store pointer to the forwarding neighbor
+		boolean notifyNeighbors = false;	// set to true if distance vector to any destination changes
+		
+		// loop through each possible destination
+		for (Node destination : this.getDestinations()) {
+			bestCost = tempCost = Float.POSITIVE_INFINITY;
+			
+			// if this = destination, then cost is 0
+			if ( destination.compareTo(this) == 0) {
+				bestCost = 0;
+				bestNeighbor = this;
+			} else {
+				// find the shortest path to each destination
+				for (Node neighbor : this.getNeighbors()) {
+					
+					tempCost = this.getCostToNeighbor(neighbor) + this.getCostFromNeighborTo(neighbor, destination);
+				
+					if (tempCost < bestCost) {
+						bestCost = tempCost;
+						bestNeighbor = neighbor;
+					}
+					
+				}
+			}
+			
+			// if bestNeighbor is null, then impossible to get to destination
+			if (bestNeighbor != null) {
+
+				//check if the forwarding path has changed
+				if ( ((Node)bestNeighbor).compareTo(this.getNextHopTo(destination)) == 0 ) {
+					try {
+						this.updateForwardingTable(destination, bestNeighbor);
+					} catch (Exception e) {
+						e.printStackTrace();
+						System.out.println("trying to add a non-neighbor, " + bestNeighbor + ", to forwarding table of " + this);
+					}
+				}
+			}
+			
+			// update distance vector if necessary
+			if (bestCost != this.getCostToDestination(destination) && bestCost > 0) {
+				try {
+					this.updateDistanceVector(destination, bestCost);
+					notifyNeighbors = true;
+				} catch (Exception e) {
+					e.printStackTrace();
+					System.out.println("trying to add destination, " + destination + ", with negative cost to " + this);
+				}
+			}
+			
+		}
+		
+		// notify neighbors if any distance vector has changed
+		if (notifyNeighbors) {
+			this.notifyNeighbors();
+		}	
+		
 	}
 	
 	/**
 	 * Send distance vector messages to all neighbors of this node
 	 */
 	protected void notifyNeighbors() {
-		// STEP 2: Fill in this method
-		
 		// Create a message containing the contents of this node's distance vector
 		// (Not doing poisoned reverse in this implementation)
 		// Send the message to every neighbor
+		
+		// the costs are the same as the distanceVector map
+		HashMap<Node,Float> costs = new HashMap<Node,Float>(distanceVector);
+		
+		for (Node neighbor : this.getNeighbors()) {
+			neighbor.sendMessage(new Message(this, costs));
+		}
+		
 	}
 }
