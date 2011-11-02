@@ -330,7 +330,7 @@ public class Node implements Comparable<Node> {
 			bestCost = tempCost = Float.POSITIVE_INFINITY;
 			
 			// if this = destination, then cost is 0
-			if ( destination.compareTo(this) == 0) {
+			if ( destination == this ) {//destination.compareTo(this) == 0) {
 				bestCost = 0;
 				bestNeighbor = this;
 			} else {
@@ -347,20 +347,15 @@ public class Node implements Comparable<Node> {
 				}
 			}
 			
-			// if bestNeighbor is null, then impossible to get to destination
-			if (bestNeighbor != null) {
-
-				//check if the forwarding path has changed
-				if ( ((Node)bestNeighbor).compareTo(this.getNextHopTo(destination)) == 0 ) {
-					try {
-						this.updateForwardingTable(destination, bestNeighbor);
-					} catch (Exception e) {
-						e.printStackTrace();
-						System.out.println("trying to add a non-neighbor, " + bestNeighbor + ", to forwarding table of " + this);
-					}
-				}
+			// set bestNeighbor as the forwarding path
+			// (no need to check if it has changed or not since neighbors are only notified if the distance vector has changed)
+			try {
+				this.updateForwardingTable(destination, bestNeighbor);
+			} catch (Exception e) {
+				e.printStackTrace();
+				System.out.println("trying to add a non-neighbor, " + bestNeighbor + ", to forwarding table of " + this);
 			}
-			
+							
 			// update distance vector if necessary
 			if (bestCost != this.getCostToDestination(destination) && bestCost > 0) {
 				try {
