@@ -20,9 +20,28 @@ public class PoisonedReverseNode extends Node {
 	
 	@Override
 	protected void notifyNeighbors() {
-		// Step 3: Fill in this method
-		
 		// Construct messages according to the poisoned reverse rule
 		// and send these messages to each neighbor
+		
+		
+		// different message to each neighbor
+		for (Node neighbor : this.getNeighbors()) {
+			HashMap<Node,Float> costs = new HashMap<Node,Float>();
+			
+			// 
+			for ( Node destination : this.getDestinations()) {
+				
+				// if the neighbor is the next hop to the destination
+				// then tell that neighbor that the distance to that destination is infinity
+				if (this.getNextHopTo(destination) == neighbor) {
+					costs.put(destination, Float.POSITIVE_INFINITY);
+				} else {
+					costs.put(destination, this.getCostToDestination(destination));
+				}
+				
+				neighbor.sendMessage(new Message(this, costs));
+			}
+			
+		}
 	}
 }
