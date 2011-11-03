@@ -5,6 +5,10 @@ package assignment03;
  * McGill University
  * michael.rabbat@mcgillca
  * 17 October 2011
+ * 
+ * Modified by Stepan Salenikovich
+ * stepan.salenikovich@gmail.com
+ * 02 November 2011
  */
 
 import java.util.*;

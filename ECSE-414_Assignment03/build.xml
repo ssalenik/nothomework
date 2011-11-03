@@ -1,0 +1,82 @@
+<!--
+	created for:
+    ECSE 414 - Homework Assignment 3, Problem 5
+    
+    template copied from:
+    http://ant.apache.org/manual/tutorial-HelloWorldWithAnt.html
+    
+    modified by:
+    Stepan Salenikovich
+    stepan.salenikovich@gmail.com
+    
+    02 November 2011 
+-->
+
+<!--
+	INSTRUCTIONS:
+	
+	running "ant" will compile and create jars for both Hw3Prob5a and Hw3Prob5b
+	
+	"ant jar a" will compile and create jar for just Hw3Prob5a
+	"ant jar b" will compile and create jar for just Hw3Prob5b
+	
+	run "ant -Dtest=<test file> a" to compile and run Hw3Prob5a
+		in this one must specify the test file in the above manner
+		
+	run "ant b" to compile and run Hw3Prob5b
+-->
+
+<project name="assignment03" basedir="." default="clean-build">
+
+    <property name="src.dir"     value="src"/>
+
+    <property name="build.dir"   value="build"/>
+    <property name="classes.dir" value="${build.dir}/classes"/>
+    <property name="jar.dir"     value="${build.dir}/jar"/>
+
+    <property name="main-class-a"  value="assignment03.Hw3Prob5a"/>
+    <property name="main-class-b"  value="assignment03.Hw3Prob5b"/>
+
+
+
+    <target name="clean">
+        <delete dir="${build.dir}"/>
+    </target>
+
+    <target name="compile">
+        <mkdir dir="${classes.dir}"/>
+        <javac srcdir="${src.dir}" destdir="${classes.dir}"/>
+    </target>
+
+    <target name="jar a" depends="compile">
+        <mkdir dir="${jar.dir}"/>
+        <jar destfile="${jar.dir}/${ant.project.name}-a.jar" basedir="${classes.dir}">
+            <manifest>
+                <attribute name="Main-Class" value="${main-class-a}"/>
+            </manifest>
+        </jar>
+    </target>
+    	
+	<target name="jar b" depends="compile">
+    	<jar destfile="${jar.dir}/${ant.project.name}-b.jar" basedir="${classes.dir}">
+    		<manifest>
+                <attribute name="Main-Class" value="${main-class-b}"/>
+            </manifest>
+        </jar>
+    </target>
+	
+	<target name="jar" depends="compile,jar a, jar b"/>
+
+    <target name="a" depends="jar a">
+        <java jar="${jar.dir}/${ant.project.name}-a.jar" fork="true">
+    		<arg value="${test}"/>
+        </java>
+    </target>	
+	
+	<target name="b" depends="jar b">
+        <java jar="${jar.dir}/${ant.project.name}-b.jar" fork="true"/>
+    </target>
+
+    <target name="clean-build" depends="clean,jar a, jar b"/>
+	
+</project>
