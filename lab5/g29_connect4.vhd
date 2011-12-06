@@ -30,8 +30,8 @@ architecture everything of g29_connect4 is
 	end_config, start_config, start_incr : std_logic;
 	signal asp_access, gra_access, display_access: natural range 0 to 4;
 	signal mv_count : natural range 0 to 16;
-	signal inASP_longest, ASP_idx : natural range 0 to 7;
-	signal inASP_length, ASP_entry : natural range 0 to 4;
+	signal inASP_longest, outASP_longest : natural range 0 to 7;
+	signal inASP_length, outASP_length : natural range 0 to 4;
 	signal inASP_dr, inASP_empty, ASP_dr, ASP_empty : std_logic_vector(0 to 7);
 	--
 	signal horiz, vertic, lr_diag, rl_diag : std_logic;
@@ -42,17 +42,110 @@ architecture everything of g29_connect4 is
 	signal gra_col, gra_col_init, gra_col_disp, gra_col_sp, gra_col_asp, gra_col_conf, gra_col_incr : natural range 0 to 7;
 	signal write_enable_gra, write_enable_gra_init, write_enable_gra_disp, write_enable_gra_sp, write_enable_gra_asp, write_enable_gra_conf, write_enable_gra_incr: std_logic;
 	--ASP
-	signal write_enable_asp, write_enable_asp_init, write_enable_asp_disp, write_enable_asp_conf, write_enable_asp_incr : std_logic;
+	signal write_enable_asp, write_enable_asp_init, write_enable_asp_disp, write_enable_asp_asp, write_enable_asp_conf, write_enable_asp_incr : std_logic;
 	signal asp_idx, asp_idx_init, asp_idx_disp, asp_idx_asp, asp_idx_incr, asp_idx_conf: natural range 0 to 7;
 	signal asp_row_read, asp_col_read: ASP_register;
 	signal asp_row_write, asp_row_write_init, asp_row_write_asp, asp_row_write_incr, asp_row_write_conf : ASP_register;
 	signal asp_col_write, asp_col_write_asp, asp_col_write_init, asp_col_write_incr, asp_col_write_conf : ASP_register;
 	--
 	signal disp0, disp1, disp2, disp3: natural range 0 to 7;
-	signal disp0_sp, disp1_sp, disp2_sp, disp3_sp: natural range 0 to 7;
-	signal disp0_disp, disp1_disp, disp2_disp, disp3_disp: natural range 0 to 7;
 
 begin
+
+	-- multilexing using control signals
+	-- 0: game init, 1: display_asp, 2: sp_player, 3: asp_player, 4: end game
+	-- GRA:
+	with gra_access select gra_write <=
+				gra_write_init when 0,
+				gra_write_sp when 2,
+				gra_write_asp when 3,
+				'X' when others;
+	
+	with gra_access select write_enable_gra <=
+				write_enable_gra_init when 0,
+				write_enable_gra_sp when 2,
+				write_enable_gra_asp when 3,
+				'X' when others;
+				
+	with gra_access select gra_row <=
+				gra_row_init when 0,
+				gra_row_disp when 1,
+				gra_row_sp when 2,
+				gra_row_asp when 3,
+				'X' when others;
+				
+	with gra_access select gra_row <=
+				gra_row_init when 0,
+				gra_row_disp when 1,
+				gra_row_sp when 2,
+				gra_row_asp when 3,
+				'X' when others;
+				
+	-- ASP registers:
+	with asp_access select write_enable_asp <=
+				write_enable_asp_init when 0,
+				write_enable_asp_disp when 1,
+				write_enable_asp_asp when 3,
+				'X' when others;
+	
+	with asp_access select asp_idx <=
+				asp_idx_init when 0,
+				asp_idx_disp when 1,
+				asp_idx_asp when 3,
+				'X' when others;
+	
+	with asp_access select asp_row_write <=
+				asp_row_write_init when 0,
+				asp_row_write_asp when 3,
+				'X' when others;
+				
+	with asp_access select asp_col_write <=
+				'X' when others;
+				
+	-- display
+	-- HEX0 and HEX1 always display contents of GRA
+	disp0 <= 1 when gra_read(1) = '1' else 0;
+	disp1 <= 1 when gra_read(0) = '1' else 0;
+	
+	with display_access select disp2 <=
+				gra_col_disp when 1,
+				gra_col_asp when 3,
+				SW_col when others;
+				
+	with display_access select disp3 <=
+				gra_row_disp when 1,
+				gra_row_asp when 3,
+				SW_row when others;
+	
+	-- ASP Next Move
+	with start_incr select gra_write_asp <=
+				gra_write_incr when '1',
+				'X' when others;
+				
+	with start_incr select gra_row_asp <=
+				gra_row_conf when '1',
+				gra_row_incr when others;
+				
+	with start_incr select gra_col_asp <=
+				gra_col_conf when '1',
+				gra_col_incr when others;
+				
+	with start_incr select write_enable_gra_asp <=
+				write_enable_gra_conf when '1',
+				write_enable_gra_incr when others;
+				
+	with start_incr select asp_idx_asp <=
+				inASP_longest when '1',
+				asp_idx_incr when others;
+				
+	with start_incr select write_enable_asp_asp <=
+				write_enable_asp_conf when '1',
+				write_enable_asp_incr when others;
+				
+	-- LEDs light up when corresponding switches are high
+	LEDR_row <= SW_row;
+	LEDR_col <= SW_col;
+	LEDR_gra_value <= SW_gra_value;
 
 	controller : entity work.g29_controller
 		port map(clock              => clock,
@@ -77,8 +170,8 @@ begin
 			     mv_count           => mv_count,
 			     inASP_longest      => inASP_longest,
 			     inASP_length       => inASP_length,
-			     ASP_idx            => ASP_idx,
-			     ASP_entry          => ASP_entry,
+			     outASP_longest     => outASP_longest,
+			     outASP_length      => outASP_length,
 			     inASP_dr 		    => inASP_dr,
 			     inASP_empty 		=> inASP_empty,
 			     ASP_dr				=> ASP_dr,
@@ -113,8 +206,8 @@ begin
 			     rl_diag          => rl_diag,
 			     inASP_dr         => ASP_dr,
 			     inASP_empty      => ASP_empty,
-			     inASP_length     => ASP_idx,
-			     inASP_longest    => ASP_entry,
+			     inASP_length     => outASP_length,
+			     inASP_longest    => outASP_longest,
 			     gra_read         => gra_read,
 			     gra_write        => gra_write_incr,
 			     gra_row          => gra_row_incr,
@@ -156,13 +249,16 @@ begin
 		port map(clock            => clock,
 			     display          => display,
 			     player_ready     => player_ready,
-			     ASP_longest      => ASP_idx,
-			     ASP_length       => ASP_entry,
+			     ASP_longest      => outASP_longest,
+			     ASP_length       => outASP_length,
 			     KEY_ready        => KEY_ready,
 			     asp_idx          => asp_idx,
 			     asp_row_read     => asp_row_read,
 			     asp_col_read     => asp_col_read,
-			     write_enable_asp => write_enable_asp);
+			     write_enable_asp => write_enable_asp,
+			     write_enable_gra => write_enable_gra_disp,
+			     gra_row		  => gra_row_disp,
+			     gra_col		  => gra_col_disp);
 			     
 	sp_palyer : entity work.g29_sp_player
 		port map(NM           => NM,

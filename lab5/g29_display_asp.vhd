@@ -14,7 +14,10 @@ entity g29_display_asp is
 		-- ASP
 		asp_idx: out natural range 0 to 7;  -- index of desired ASP register
 		asp_row_read, asp_col_read: in ASP_register;  -- ASP row and col read from ASP Registers Module
-		write_enable_asp: out std_logic  -- active low		
+		write_enable_asp: out std_logic;  -- active low
+		-- GRA
+		write_enable_gra: out std_logic;  -- active low
+		gra_row, gra_col : out natural range 0 to 7 -- row & col index
 	);
 end entity g29_display_asp;
 
@@ -34,5 +37,9 @@ begin
 
 	asp_idx <= ASP_longest;
 	write_enable_asp <= '1';
+	
+	write_enable_gra <= '1';
+	gra_row <= asp_row_read(ASP_length - 1);
+	gra_col <= asp_col_read(ASP_length - 1);
 
 end architecture RTL;

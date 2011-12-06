@@ -23,7 +23,8 @@ entity g29_asp_registers is
 end g29_asp_registers;
 
 architecture logic of g29_asp_registers is
-	signal ASP_r, ASP_c : ASP_array := ((others=> (others=>7)));
+	signal ASP_r : ASP_array := ((others=> (others=>7)));
+	signal ASP_c : ASP_array := ((others=> (others=>7)));
 begin
 	process(clk, rst)
 	begin

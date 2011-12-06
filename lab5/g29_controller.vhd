@@ -20,8 +20,8 @@ entity g29_controller is
 		mv_count : in natural range 0 to 16;
 		inASP_longest : in natural range 0 to 7;
 		inASP_length : in natural range 0 to 4;
-		ASP_idx : out natural range 0 to 7;
-		ASP_entry : out natural range 0 to 4;
+		outASP_longest : out natural range 0 to 7;
+		outASP_length : out natural range 0 to 4;
 		inASP_dr , inASP_empty : in std_logic_vector(0 to 7);
 		ASP_dr, ASP_empty : out std_logic_vector(0 to 7)
 	);
@@ -126,6 +126,6 @@ begin
 		end if;
 	end process;
 	
-	ASP_idx <= ASP_longest;
-	ASP_entry <= ASP_length;
+	outASP_longest <= ASP_longest;
+	outASP_length <= ASP_length;
 end architecture RTL;
