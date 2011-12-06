@@ -45,6 +45,7 @@ begin
 					vertic <= '0';
 					lr_diag <= '0';
 					rl_diag <= '0';
+					end_config <= '0';
 				elsif inASP_length = 1 then
 					-- check GRA for plausible configurations
 					if fetch_gra = '1' then
@@ -198,10 +199,13 @@ begin
 						lr_diag <= '0';
 						rl_diag <= '0';
 					end if;
+					end_config <= '0';
 				end if;
+			else
+				end_config <= '1';
 			end if;
 		end if;
-	end;
+	end process;
 	
 	-- always reading
 	write_enable_gra <= read;

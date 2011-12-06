@@ -30,7 +30,7 @@ begin
 				player_ready <= '1';
 			end if;
 		end if;
-	end;
+	end process;
 
 	asp_idx <= ASP_longest;
 	write_enable_asp <= '1';

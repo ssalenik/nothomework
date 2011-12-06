@@ -358,9 +358,6 @@ begin
 					disk_ins <= inser_flag;
 					ASPMC <= '0';
 					
-					-- set ASP stuff
-					asp_idx <= empty_counter;  -- this is the current longest ASP
-					
 					ASP_empty <= empty_temp;
 					ASP_dr <= dr_temp;
 					state <= fetch;

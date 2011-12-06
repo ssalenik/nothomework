@@ -43,7 +43,7 @@ begin
 				game_init_complete <= '1';
 			end if;
 		end if;
-	end;
+	end process;
 			
 	gra_write <= "01";
 	asp_idx <= 0;

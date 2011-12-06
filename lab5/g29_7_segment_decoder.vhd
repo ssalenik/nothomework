@@ -41,8 +41,8 @@ begin
 	PORT MAP(inclock => clk, address => std_logic_vector(to_unsigned(number, 3)), q => lut_output);
 	
 	with display_end select seven_seg_display <=
-					lut_output when display_end = 0,
-					ENDGAME when display_end = 1,
-					LOSE when display_end = 2;
+					lut_output when 0,
+					ENDGAME when 1,
+					LOSE when 2;
 	
 end display;

@@ -22,7 +22,8 @@ entity g29_controller is
 		inASP_length : in natural range 0 to 4;
 		ASP_idx : out natural range 0 to 7;
 		ASP_entry : out natural range 0 to 4;
-		blah : in std_logic
+		inASP_dr , inASP_empty : in std_logic_vector(0 to 7);
+		ASP_dr, ASP_empty : out std_logic_vector(0 to 7)
 	);
 end entity g29_controller;
 
@@ -35,7 +36,7 @@ begin
 	process(clock, KEY_reset)
 	
 	begin
-		if KEY_reset then
+		if KEY_reset = '0' then
 			state <= start;
 			game_init <= '0';
 			display <= '1';
@@ -48,6 +49,8 @@ begin
 			display_access <= 0;
 			asp_access <= 0;
 			gra_access <= 0;
+			ASP_dr <= "00000000";
+			ASP_empty <= "11111111";
 		elsif rising_edge(clock) then
 			if state = start then
 				if game_init_complete = '0' then
@@ -107,6 +110,8 @@ begin
 						display_access  <= 4;
 						NM <= '1';
 					end if;
+					ASP_empty <= inASP_empty;
+					ASP_dr <= inASP_dr;
 					display <= '0';
 				end if;
 			elsif state = end_game then
@@ -119,7 +124,7 @@ begin
 				end if;
 			end if;
 		end if;
-	end;
+	end process;
 	
 	ASP_idx <= ASP_longest;
 	ASP_entry <= ASP_length;
