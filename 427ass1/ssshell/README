@@ -1,0 +1,31 @@
+/*
+ * README
+ *
+ * ssshell:
+ * Super Simple Shell or Stepan Salenikovich Shell
+ *
+ * Stepan Salenikovich
+ * ID: 260326129
+ * Feb 02, 2012
+ *
+ */
+
+Implemented commands:
+history	- acts just like history in bash, prints the command along with the command
+pwd
+set 	- acts like env (does not take args)
+env
+exit
+
+Not implemented commands:
+echo		- would be simple to implement once the parsing function is finished
+cd
+unset		- would be simple to implement once the parsing function is finished
+pushd
+popd
+external	- would be simple to implement once the parsing function is finished
+redirection
+piping
+
+NOTES:
+Started fairly late, so obviously many features are missing.

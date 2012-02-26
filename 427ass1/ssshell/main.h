@@ -1,8 +1,13 @@
 /*
  * main.h
  *
- *  Created on: Jan 31, 2012
- *      Author: test
+ * ssshell:
+ * Super Simple Shell or Stepan Salenikovich Shell
+ *
+ * Stepan Salenikovich
+ * ID: 260326129
+ * Feb 02, 2012
+ *
  */
 
 #ifndef MAIN_H_
@@ -12,7 +17,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include <readline/readline.h>
+//#include <readline/readline.h>
 #include <readline/history.h>
 
 #include "parseinput.h"
@@ -20,5 +25,7 @@
 #endif /* MAIN_H_ */
 
 /* prototypes */
-
-
+int prompt();
+int getinput(char** input_buffer);
+int printenv();
+int printhist();
