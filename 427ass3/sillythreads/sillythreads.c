@@ -24,7 +24,7 @@ List *runqueue;
 list_release_t *destroy_runqueue;
 
 // thread table, index points to the thread_control_block of a thread
-thread_control_block_t *threads[MAX_THREADS];
+thread_control_block_t **threads;
 
 // total number of threads, ie: the next thread id
 int num_threads;
@@ -33,12 +33,12 @@ int num_threads;
 int current_thread;
 
 // array of semaphores
-semaphore_t *semaphores;
+semaphore_t **semaphores;
 
 // total number of semaphores, ie: the next semaphore id
 int num_semaphores;
 
-// quantum size
+// quantum size in ms
 int quantum;
 
 /**
@@ -47,13 +47,25 @@ int quantum;
  * returns 0 on success, -1 on failure.
  *
  */
-int init_my_threads(){
+int init_my_threads() {
 	/**
 	 * 	 Initializes the semaphore table and sets the total number of active semaphores to 0.
 	 * 	 An entry in the semaphore table is a struct that defines the complete state of the semaphore.
 	 * 	 The table also has a queue to hold the threads that will be waiting on the semaphore.
 	 *
 	 */
+	threads = (thread_control_block_t **) malloc(
+			sizeof(thread_control_block_t *) * THREADS_MAX);
+	num_threads = 0;
+
+	runqueue = list_create(destroy_runqueue);
+
+	semaphores = (semaphore_t **) malloc(
+			sizeof(semaphore_t *) * SEMAPHORES_NUM);
+	num_semaphores = 0;
+
+	quantum = QUANTUM_DEFAULT;
+
 	return 0;
 }
 
@@ -64,7 +76,7 @@ int init_my_threads(){
  * Returns -1 and prints error message on failure.
  *
  */
-int create_my_thread(char *threadname, void (*threadfunc)(), int stacksize) {
+int create_my_thread(char *threadname, void(*threadfunc)(), int stacksize) {
 	/* Allocate the stack and set up the user context.
 	 *
 	 * The new thread should run the threadfunc when it starts.
@@ -76,6 +88,33 @@ int create_my_thread(char *threadname, void (*threadfunc)(), int stacksize) {
 	 * New thread *may* be included in the runqueue
 	 *
 	 */
+
+	// first check if we can create any more threads
+	if (num_semaphores == THREADS_MAX) {
+		fprintf(stderr,
+				"Cannot create new thread, max number of threads reached: %d\n",
+				THREADS_MAX);
+		return -1;
+	}
+
+	thread_control_block_t* new_thread = (thread_control_block_t *) malloc(
+			sizeof(thread_control_block_t *));
+
+	// init thread stuff
+	new_thread->runtime = 0;
+	new_thread->total_time = 0;
+	new_thread->stacksize = stacksize;
+	strcpy(new_thread->thread_name, threadname); // copy name to make sure its not changed externally
+	new_thread->state = RUNNABLE;
+	new_thread->state_str = "RUNNABLE";
+	new_thread->thread_id = num_threads;
+	new_thread->threadfunc = threadfunc;
+	new_thread->context; //TODO
+
+	// put in thread table
+	threads[num_threads] = new_thread;
+
+	num_threads++;
 
 	return 0;
 }
@@ -97,19 +136,18 @@ void exit_my_thread() {
  */
 void runthreads() {
 
-
 }
 
 /**
  * Sets the quantum size of the round robin scheduler.
  */
-void set_quantum_size(int quantum) {
+void set_quantum_size(int quantum_size) {
 	/**
-	 * The scheduler picks the next thread from the runqueue and appends the current to the end of the runqueue. Then switches to the new thread.
+	 * The scheduler picks the next thread from the runqueue and appends the current to the end of the runqueue
+	 * Then switches to the new thread.
 	 *
 	 */
-
-
+	quantum = quantum_size;
 }
 
 /**
@@ -122,6 +160,26 @@ int create_semaphore(int value) {
 	 * Inserts an entry into the semaphore table initialized by init_my_threads()
 	 *
 	 */
+
+	// check if we can make another semaphore
+	// TODO: implement memory allocation if we need more semaphores
+	if (num_semaphores == SEMAPHORES_NUM) {
+		fprintf(stderr, "Cannot create new semaphore, too many: %d\n",
+				SEMAPHORES_NUM);
+		return -1;
+	}
+
+	// init new semaphore
+	semaphore_t *sem = (semaphore_t *) malloc(sizeof(semaphore_t));
+	sem->index = num_semaphores;
+	sem->init_value = value;
+	sem->value = value;
+	sem->thread_queue = list_create(sem->queue_destructor);
+
+	// add it to list of semaphores
+	semaphores[num_semaphores] = sem;
+
+	num_semaphores++;
 
 	return 0;
 }
@@ -148,7 +206,6 @@ void semaphore_signal(int semaphore) {
 	 * if less than 1, takes the first WAIT thread and makes it RUNNABLE on the runqueue
 	 */
 
-
 }
 
 /**
@@ -160,7 +217,6 @@ void semaphore_signal(int semaphore) {
  */
 void destroy_semaphore(int semaphore) {
 
-
 }
 
 /**
@@ -171,6 +227,15 @@ void my_threads_state() {
 	 * print in tabular form:
 	 * thread name, thread state, CPU run time
 	 */
+	int i;
 
+	//TODO: ensure nice, tabular output formatting
+	printf("State of Threads:\n");
+	printf("|  Thread Name  |  State  |  run time  |");
+
+	for (i = 0; i < num_threads; i++) {
+		printf("|%15s|%9s|%12d|\n", threads[i]->thread_name,
+				threads[i]->state_str, threads[i]->total_time);
+	}
 
 }

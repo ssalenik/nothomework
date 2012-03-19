@@ -15,12 +15,16 @@
  *
  * =====================================================================================
  */
-#define MAX_THREADS 20	// defines the maximum number of threads allowed
+#define THREADS_MAX 20		// defines the maximum number of threads allowed
+#define SEMAPHORES_NUM	20	// defines space allocated for semaphores initially
+#define QUANTUM_DEFAULT 100	// sets default quantum size
 
 /* includes */
 #include <slack/std.h>
 #include <slack/list.h>
 #include <ucontext.h>
+#include <stdio.h>
+#include <string.h>
 
 /* data structures */
 typedef struct {
@@ -39,6 +43,7 @@ typedef struct {
 	char* thread_name;				// thread name
 	int thread_id;					// thread id; same as its id in the thread array
 	state_t state;					// current state of thread
+	char* state_str;				// name of state as a string, for printing
 	void (*threadfunc)();			// pointer to the function which will run in this thread
 	int stacksize;					// size of stack for this thread
 	int runtime;					// time spent in the current RUNNING state, 0 if not running
