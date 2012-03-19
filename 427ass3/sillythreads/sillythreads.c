@@ -15,10 +15,36 @@
  *
  * =====================================================================================
  */
+#include "sillythreads.h"
+
+/* global vars */
+
+// the runqueue
+List *runqueue;
+list_release_t *destroy_runqueue;
+
+// thread table, index points to the thread_control_block of a thread
+thread_control_block_t *threads[MAX_THREADS];
+
+// total number of threads, ie: the next thread id
+int num_threads;
+
+// the thread currently running
+int current_thread;
+
+// array of semaphores
+semaphore_t *semaphores;
+
+// total number of semaphores, ie: the next semaphore id
+int num_semaphores;
+
+// quantum size
+int quantum;
 
 /**
  * Initialized global data structures:
- * runqueue - table for thread control blocks
+ *
+ * returns 0 on success, -1 on failure.
  *
  */
 int init_my_threads(){
@@ -33,6 +59,7 @@ int init_my_threads(){
 
 /**
  * Creates a new thread.
+ *
  * Returns an int that points to the thread control block that is allocated to the thread.
  * Returns -1 and prints error message on failure.
  *

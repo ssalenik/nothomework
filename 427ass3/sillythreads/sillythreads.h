@@ -15,6 +15,7 @@
  *
  * =====================================================================================
  */
+#define MAX_THREADS 20	// defines the maximum number of threads allowed
 
 /* includes */
 #include <slack/std.h>
@@ -40,7 +41,8 @@ typedef struct {
 	state_t state;					// current state of thread
 	void (*threadfunc)();			// pointer to the function which will run in this thread
 	int stacksize;					// size of stack for this thread
-	int runtime;					// total time spent running on CPU
+	int runtime;					// time spent in the current RUNNING state, 0 if not running
+	int total_time;					// total time spent running on CPU
 }thread_control_block_t;
 
 /* function prototypes */
