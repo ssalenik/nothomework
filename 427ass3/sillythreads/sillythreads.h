@@ -15,9 +15,12 @@
  *
  * =====================================================================================
  */
+#ifndef _SILLYTHREADS
+#define _SILLYTHREADS
+
 #define THREADS_MAX 20		// defines the maximum number of threads allowed
 #define SEMAPHORES_NUM	20	// defines space allocated for semaphores initially
-#define QUANTUM_DEFAULT 100	// sets default quantum size
+#define QUANTUM_DEFAULT 1000	// sets default quantum size in us; this is also the minimum allowed
 
 /* includes */
 #include <slack/std.h>
@@ -25,6 +28,7 @@
 #include <ucontext.h>
 #include <stdio.h>
 #include <string.h>
+#include <signal.h>
 
 /* data structures */
 typedef struct {
@@ -36,17 +40,19 @@ typedef struct {
 
 }semaphore_t;
 
-typedef enum { RUNNING, RUNNABLE, WAITING, EXITING }state_t;
+typedef enum { RUNNING, RUNNABLE, WAIT, EXIT }state_t;
+static char *state_str[4] = {"RUNNING", "RUNNABLE", "WAIT", "EXIT"};	// to make printing easier
+
 
 typedef struct {
-	ucontext_t context;				// context
+	ucontext_t *context;				// context
 	char* thread_name;				// thread name
 	int thread_id;					// thread id; same as its id in the thread array
 	state_t state;					// current state of thread
-	char* state_str;				// name of state as a string, for printing
 	void (*threadfunc)();			// pointer to the function which will run in this thread
 	int stacksize;					// size of stack for this thread
-	int runtime;					// time spent in the current RUNNING state, 0 if not running
+	int start_time;					// time at which current RUNNING state started; used to calculate runtime
+	int run_time;					// time spent in the current RUNNING state, 0 if not running
 	int total_time;					// total time spent running on CPU
 }thread_control_block_t;
 
@@ -61,3 +67,11 @@ void semaphore_wait(int semaphore);
 void semaphore_signal(int semaphore);
 void destroy_semaphore(int semaphore);
 void my_threads_state();
+
+/* helper functions - not to be called by processes using the library */
+int mkcontext(ucontext_t *uc, void (*threadfunc)(), int stacksize);
+void setup_signals(void);
+void timer_interrupt(int j, siginfo_t *si, void *old_context);
+void scheduler();
+
+#endif

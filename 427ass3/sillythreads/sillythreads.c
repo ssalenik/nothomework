@@ -38,7 +38,7 @@ semaphore_t **semaphores;
 // total number of semaphores, ie: the next semaphore id
 int num_semaphores;
 
-// quantum size in ms
+// quantum size in us (microseconds)
 int quantum;
 
 /**
@@ -92,8 +92,11 @@ int create_my_thread(char *threadname, void(*threadfunc)(), int stacksize) {
 	// first check if we can create any more threads
 	if (num_semaphores == THREADS_MAX) {
 		fprintf(stderr,
-				"Cannot create new thread, max number of threads reached: %d\n",
+				"cannot create new thread, max number of threads reached: %d\n",
 				THREADS_MAX);
+		return -1;
+	} else if (stacksize <= 0) {
+		fprintf(stderr, "stacksize must be greater than zero!\n");
 		return -1;
 	}
 
@@ -101,15 +104,18 @@ int create_my_thread(char *threadname, void(*threadfunc)(), int stacksize) {
 			sizeof(thread_control_block_t *));
 
 	// init thread stuff
-	new_thread->runtime = 0;
+	new_thread->run_time = 0;
 	new_thread->total_time = 0;
 	new_thread->stacksize = stacksize;
 	strcpy(new_thread->thread_name, threadname); // copy name to make sure its not changed externally
 	new_thread->state = RUNNABLE;
-	new_thread->state_str = "RUNNABLE";
 	new_thread->thread_id = num_threads;
 	new_thread->threadfunc = threadfunc;
-	new_thread->context; //TODO
+
+	if( mkcontext(new_thread->context, threadfunc, stacksize) != 0 ){
+		fprintf(stderr, "thread context creation failed");
+		return -1;
+	}
 
 	// put in thread table
 	threads[num_threads] = new_thread;
@@ -128,6 +134,9 @@ void exit_my_thread() {
 	 * The entry in the thread control bloc may remain, the state should be set to EXIT
 	 */
 
+	threads[current_thread]->state = EXIT;
+
+
 }
 
 /**
@@ -136,18 +145,53 @@ void exit_my_thread() {
  */
 void runthreads() {
 
+	/*
+		 block ALARM signal; // We don't want ALARM signal to disturbe main thread.
+
+	start timers;  // This timer will still trigger signal handlers when child
+				   // threads are running.
+
+	while(1)
+	{
+		if(no threads waiting to run)
+		{
+			return;
+		}
+
+		current_thread = next thread to run;
+
+		swap to child thread;
+
+		// After a while, excution comes back to here
+
+		if(a thread exits)
+		{
+		}
+		else if(a thread runs out of time slice)
+		{
+		}
+		else if(a thread is waiting for a semaphore)
+		{
+		}
+		else
+		{
+			You have a big trouble, control shouldn't be given back to main
+			thread besides the three reasons listed before.
+		}
+	}
+	 */
+
 }
 
 /**
- * Sets the quantum size of the round robin scheduler.
+ * Sets the quantum size of the round robin scheduler in milliseconds.
+ * The default quantum is 1000us (1ms)
  */
 void set_quantum_size(int quantum_size) {
-	/**
-	 * The scheduler picks the next thread from the runqueue and appends the current to the end of the runqueue
-	 * Then switches to the new thread.
-	 *
-	 */
-	quantum = quantum_size;
+	if( quantum_size*1000 < QUANTUM_DEFAULT) {
+		quantum = QUANTUM_DEFAULT;
+		printf("warning: quantum size too small, setting to default: %dus\n", QUANTUM_DEFAULT);
+	} else quantum = 1000*quantum_size;
 }
 
 /**
@@ -234,8 +278,92 @@ void my_threads_state() {
 	printf("|  Thread Name  |  State  |  run time  |");
 
 	for (i = 0; i < num_threads; i++) {
-		printf("|%15s|%9s|%12d|\n", threads[i]->thread_name,
-				threads[i]->state_str, threads[i]->total_time);
+		printf("|%15s|%9s|%12d|\n", threads[i]->thread_name, state_str[threads[i]->state], threads[i]->total_time);
 	}
 
+}
+
+/**
+ * Modified version of the swap.c example provided on http://cgi.cs.mcgill.ca/~xcai9/2012_comp_310.html
+ *
+ * The scheduling algorithm; selects the next context to run, then starts it.
+ */
+void scheduler() {
+	//printf("scheduling out thread %d\n", curcontext);
+
+	// put the current thread at the end of the run queue
+
+	curcontext = (curcontext + 1) % NUMCONTEXTS; /* round robin */
+	cur_context = &contexts[curcontext];
+
+	printf("scheduling in thread %d\n", curcontext);
+
+	setcontext(cur_context); /* go */
+}
+
+/**
+ * Modified version of the swap.c example provided on http://cgi.cs.mcgill.ca/~xcai9/2012_comp_310.html
+ *
+ *Timer interrupt handler.
+ *Creates a new context to run the scheduler in, masks signals, then swaps contexts saving the previously executing thread and jumping to the scheduler.
+ */
+void timer_interrupt(int j, siginfo_t *si, void *old_context) {
+	/* Create new scheduler context */
+	getcontext(&signal_context);
+	signal_context.uc_stack.ss_sp = signal_stack;
+	signal_context.uc_stack.ss_size = STACKSIZE;
+	signal_context.uc_stack.ss_flags = 0;
+	sigemptyset(&signal_context.uc_sigmask);
+	makecontext(&signal_context, scheduler, 0);
+
+	/* save running thread, jump to scheduler */
+	swapcontext(cur_context, &signal_context);
+}
+
+/**
+ * Modified version of the swap.c example provided on http://cgi.cs.mcgill.ca/~xcai9/2012_comp_310.html
+ *
+ * helper function to create a context.
+ * initialize the context from the current context, setup the new stack, signal mask, and tell it which function to call.
+ */
+int mkcontext(ucontext_t *uc, void (*threadfunc)(), int stacksize) {
+	void * stack;
+
+	getcontext(uc);
+
+	stack = malloc(sizeof(char)*stacksize);
+	if (stack == NULL) {
+		fprintf(stderr,"stack malloc failed\n");
+		return -1;
+	}
+	/* we need to initialize the ucontext structure, give it a stack,
+	 flags, and a sigmask */
+	uc->uc_stack.ss_sp = stack;
+	uc->uc_stack.ss_size = stacksize;
+	uc->uc_stack.ss_flags = 0;
+	sigemptyset(&uc->uc_sigmask);
+
+	/* setup the function we're going to, and n-1 arguments. */
+	makecontext(uc, (void(*)()) threadfunc, 0);
+
+	//printf("context is %lx\n", (unsigned long) uc);
+
+	return 0;
+}
+
+/**
+ * Modified version of the swap.c example provided on http://cgi.cs.mcgill.ca/~xcai9/2012_comp_310.html
+ *
+ * Set up SIGALRM signal handler
+ */
+void setup_signals(void) {
+	struct sigaction act;
+
+	act.sa_sigaction = timer_interrupt;
+	sigemptyset(&act.sa_mask);
+	act.sa_flags = SA_RESTART | SA_SIGINFO;
+
+	if (sigaction(SIGALRM, &act, NULL) != 0) {
+		perror("Signal handler");
+	}
 }
