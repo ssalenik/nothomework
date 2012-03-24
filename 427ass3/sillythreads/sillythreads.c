@@ -27,7 +27,7 @@ list_release_t *destroy_runqueue;
 thread_control_block_t **threads;
 
 // total number of threads, ie: the next thread id
-int num_threads;
+int next_thread_index;
 
 // the thread currently running
 int current_thread;
@@ -36,10 +36,17 @@ int current_thread;
 semaphore_t **semaphores;
 
 // total number of semaphores, ie: the next semaphore id
-int num_semaphores;
+int next_semaphore_index;
 
 // quantum size in us (microseconds)
 int quantum;
+
+// interrupt context
+ucontext_t signal_context; /* the interrupt context */
+void *signal_stack; /* global interrupt stack */
+
+// main context
+ucontext_t main_context; //the main context, to be able to return to run_threads
 
 /**
  * Initialized global data structures:
@@ -53,18 +60,29 @@ int init_my_threads() {
 	 * 	 An entry in the semaphore table is a struct that defines the complete state of the semaphore.
 	 * 	 The table also has a queue to hold the threads that will be waiting on the semaphore.
 	 *
+	 * 	 since list_shift_int returns 0 when no items remain, start indexing threads and semaphores at 1
+	 *
 	 */
 	threads = (thread_control_block_t **) malloc(
-			sizeof(thread_control_block_t *) * THREADS_MAX);
-	num_threads = 0;
+			sizeof(thread_control_block_t *) * (THREADS_MAX + 1));
+	threads[0] = NULL;
+	next_thread_index = 1;
 
 	runqueue = list_create(destroy_runqueue);
 
 	semaphores = (semaphore_t **) malloc(
-			sizeof(semaphore_t *) * SEMAPHORES_NUM);
-	num_semaphores = 0;
+			sizeof(semaphore_t *) * (SEMAPHORES_NUM + 1));
+	semaphores[0] = NULL;
+	next_semaphore_index = 1;
 
 	quantum = QUANTUM_DEFAULT;
+
+	/* allocate the global signal/interrupt stack */
+	signal_stack = malloc(4096);
+	if (signal_stack == NULL) {
+		perror("malloc");
+		exit(1);
+	}
 
 	return 0;
 }
@@ -90,7 +108,7 @@ int create_my_thread(char *threadname, void(*threadfunc)(), int stacksize) {
 	 */
 
 	// first check if we can create any more threads
-	if (num_semaphores == THREADS_MAX) {
+	if (next_thread_index == (THREADS_MAX + 1)) {
 		fprintf(stderr,
 				"cannot create new thread, max number of threads reached: %d\n",
 				THREADS_MAX);
@@ -109,18 +127,18 @@ int create_my_thread(char *threadname, void(*threadfunc)(), int stacksize) {
 	new_thread->stacksize = stacksize;
 	strcpy(new_thread->thread_name, threadname); // copy name to make sure its not changed externally
 	new_thread->state = RUNNABLE;
-	new_thread->thread_id = num_threads;
+	new_thread->thread_id = next_thread_index;
 	new_thread->threadfunc = threadfunc;
 
-	if( mkcontext(new_thread->context, threadfunc, stacksize) != 0 ){
+	if (mkcontext(new_thread->context, threadfunc, stacksize) != 0) {
 		fprintf(stderr, "thread context creation failed");
 		return -1;
 	}
 
 	// put in thread table
-	threads[num_threads] = new_thread;
+	threads[next_thread_index] = new_thread;
 
-	num_threads++;
+	next_thread_index++;
 
 	return 0;
 }
@@ -136,7 +154,6 @@ void exit_my_thread() {
 
 	threads[current_thread]->state = EXIT;
 
-
 }
 
 /**
@@ -144,43 +161,7 @@ void exit_my_thread() {
  * Activates the thread switcher.
  */
 void runthreads() {
-
-	/*
-		 block ALARM signal; // We don't want ALARM signal to disturbe main thread.
-
-	start timers;  // This timer will still trigger signal handlers when child
-				   // threads are running.
-
-	while(1)
-	{
-		if(no threads waiting to run)
-		{
-			return;
-		}
-
-		current_thread = next thread to run;
-
-		swap to child thread;
-
-		// After a while, excution comes back to here
-
-		if(a thread exits)
-		{
-		}
-		else if(a thread runs out of time slice)
-		{
-		}
-		else if(a thread is waiting for a semaphore)
-		{
-		}
-		else
-		{
-			You have a big trouble, control shouldn't be given back to main
-			thread besides the three reasons listed before.
-		}
-	}
-	 */
-
+	current_thread = 1;
 }
 
 /**
@@ -188,10 +169,12 @@ void runthreads() {
  * The default quantum is 1000us (1ms)
  */
 void set_quantum_size(int quantum_size) {
-	if( quantum_size*1000 < QUANTUM_DEFAULT) {
+	if (quantum_size * 1000 < QUANTUM_DEFAULT) {
 		quantum = QUANTUM_DEFAULT;
-		printf("warning: quantum size too small, setting to default: %dus\n", QUANTUM_DEFAULT);
-	} else quantum = 1000*quantum_size;
+		printf("warning: quantum size too small, setting to default: %dus\n",
+				QUANTUM_DEFAULT);
+	} else
+		quantum = 1000 * quantum_size;
 }
 
 /**
@@ -207,7 +190,7 @@ int create_semaphore(int value) {
 
 	// check if we can make another semaphore
 	// TODO: implement memory allocation if we need more semaphores
-	if (num_semaphores == SEMAPHORES_NUM) {
+	if (next_semaphore_index == (SEMAPHORES_NUM + 1)) {
 		fprintf(stderr, "Cannot create new semaphore, too many: %d\n",
 				SEMAPHORES_NUM);
 		return -1;
@@ -215,15 +198,15 @@ int create_semaphore(int value) {
 
 	// init new semaphore
 	semaphore_t *sem = (semaphore_t *) malloc(sizeof(semaphore_t));
-	sem->index = num_semaphores;
+	sem->index = next_semaphore_index;
 	sem->init_value = value;
 	sem->value = value;
 	sem->thread_queue = list_create(sem->queue_destructor);
 
 	// add it to list of semaphores
-	semaphores[num_semaphores] = sem;
+	semaphores[next_semaphore_index] = sem;
 
-	num_semaphores++;
+	next_semaphore_index++;
 
 	return 0;
 }
@@ -277,8 +260,9 @@ void my_threads_state() {
 	printf("State of Threads:\n");
 	printf("|  Thread Name  |  State  |  run time  |");
 
-	for (i = 0; i < num_threads; i++) {
-		printf("|%15s|%9s|%12d|\n", threads[i]->thread_name, state_str[threads[i]->state], threads[i]->total_time);
+	for (i = 1; i < next_semaphore_index; i++) {
+		printf("|%15s|%9s|%12d|\n", threads[i]->thread_name,
+				state_str[threads[i]->state], threads[i]->total_time);
 	}
 
 }
@@ -291,14 +275,28 @@ void my_threads_state() {
 void scheduler() {
 	//printf("scheduling out thread %d\n", curcontext);
 
-	// put the current thread at the end of the run queue
+	// check if thread has completed
+	if(threads[current_thread]->state == EXIT) {
+		// do exit stuff?
+	} else {
+		// else append it to the end of the runqueue
+		threads[current_thread]->state = RUNNABLE;
+		list_append_int(runqueue, current_thread);
+	}
 
-	curcontext = (curcontext + 1) % NUMCONTEXTS; /* round robin */
-	cur_context = &contexts[curcontext];
+	// get the next thread waiting to run from the run queue
+	current_thread = list_shift_int(runqueue);
 
-	printf("scheduling in thread %d\n", curcontext);
-
-	setcontext(cur_context); /* go */
+	// check if there is a next item
+	// current_thread is 0 if there is not
+	if(current_thread == 0) {
+		// return to main context
+		setcontext(&main_context);
+	} else {
+		// else run next thread on queue
+		threads[current_thread]->state = RUNNING;
+		setcontext(threads[current_thread]->context);
+	}
 }
 
 /**
@@ -311,13 +309,12 @@ void timer_interrupt(int j, siginfo_t *si, void *old_context) {
 	/* Create new scheduler context */
 	getcontext(&signal_context);
 	signal_context.uc_stack.ss_sp = signal_stack;
-	signal_context.uc_stack.ss_size = STACKSIZE;
+	signal_context.uc_stack.ss_size = 4096;
 	signal_context.uc_stack.ss_flags = 0;
 	sigemptyset(&signal_context.uc_sigmask);
 	makecontext(&signal_context, scheduler, 0);
-
 	/* save running thread, jump to scheduler */
-	swapcontext(cur_context, &signal_context);
+	swapcontext(threads[current_thread]->context, &signal_context);
 }
 
 /**
@@ -326,14 +323,14 @@ void timer_interrupt(int j, siginfo_t *si, void *old_context) {
  * helper function to create a context.
  * initialize the context from the current context, setup the new stack, signal mask, and tell it which function to call.
  */
-int mkcontext(ucontext_t *uc, void (*threadfunc)(), int stacksize) {
+int mkcontext(ucontext_t *uc, void(*threadfunc)(), int stacksize) {
 	void * stack;
 
 	getcontext(uc);
 
-	stack = malloc(sizeof(char)*stacksize);
+	stack = malloc(sizeof(char) * stacksize);
 	if (stack == NULL) {
-		fprintf(stderr,"stack malloc failed\n");
+		fprintf(stderr, "stack malloc failed\n");
 		return -1;
 	}
 	/* we need to initialize the ucontext structure, give it a stack,
@@ -352,8 +349,6 @@ int mkcontext(ucontext_t *uc, void (*threadfunc)(), int stacksize) {
 }
 
 /**
- * Modified version of the swap.c example provided on http://cgi.cs.mcgill.ca/~xcai9/2012_comp_310.html
- *
  * Set up SIGALRM signal handler
  */
 void setup_signals(void) {
