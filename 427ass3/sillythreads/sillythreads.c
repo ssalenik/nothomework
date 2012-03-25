@@ -51,6 +51,9 @@ void *signal_stack; /* global interrupt stack */
 // main context
 static ucontext_t main_context; //the main context, to be able to return to run_threads
 
+//timer
+struct itimerval it;
+
 /**
  * Initialized global data structures:
  *
@@ -179,7 +182,7 @@ void exit_my_thread() {
  */
 void runthreads() {
 	int i;
-	struct itimerval it;
+
 
 	current_thread = 1;
 
@@ -200,6 +203,9 @@ void runthreads() {
 	/* force a swap to the first context */
 	printf("ready to start\n");
 	swapcontext(&main_context, threads[current_thread]->context);
+
+	printf("destorying runqueue\n");
+	list_destroy(&runqueue);
 }
 
 /**
@@ -226,6 +232,8 @@ int create_semaphore(int value) {
 	 *
 	 */
 
+	printf("creating semaphore %d with initial value %d\n", next_semaphore_index, value);
+
 	// check if we can make another semaphore
 	// TODO: implement memory allocation if we need more semaphores
 	if (next_semaphore_index == (SEMAPHORES_NUM + 1)) {
@@ -244,9 +252,11 @@ int create_semaphore(int value) {
 	// add it to list of semaphores
 	semaphores[next_semaphore_index] = sem;
 
+	printf("semaphore %d created with value %d\n", semaphores[next_semaphore_index]->index, semaphores[next_semaphore_index]->value);
+
 	next_semaphore_index++;
 
-	return 0;
+	return (next_semaphore_index - 1);
 }
 
 /**
@@ -254,23 +264,60 @@ int create_semaphore(int value) {
  * If the value goes below 0, the thread is put into a WAIT state.
  */
 void semaphore_wait(int semaphore) {
-	/**
-	 * WAIT - the thread is taken out of the runqueue
-	 *
-	 * accesses the semaphore record and manipulates its contents
-	 */
+	char print[100];
+	// disable alarm while working with semaphore
+	sighold(SIGALRM);
+	sprintf(print, "value of semaphore %d is %d\n", semaphore,semaphores[semaphore]->value);
+	perror(print);
 
+	semaphores[semaphore]->value -= 1;
+	if(semaphores[semaphore]->value < 0) {
+		sprintf(print, "thread %d put on waitqueue\n", current_thread);
+		perror(print);
+		// block thread
+		threads[current_thread]->state = WAIT;
+		// put it on the wait queue
+		list_append_int(semaphores[semaphore]->thread_queue, current_thread);
+
+		//unblock alarm and wait for scheduler to take over
+		sigrelse(SIGALRM);
+		while(threads[current_thread]->state == WAIT); // signal should make the thread RUNNABLE again
+	} else {
+		//don't block thread, unblock alarm and go back to the thread
+		sigrelse(SIGALRM);
+	}
 }
 
 /**
  * Increments the value of the given semaphore.
- * If the value is less than 1, then the thread at the top of the wait queue is put on the runqueue.
+ * If the value was  0, then the thread at the top of the wait queue is put on the runqueue.
  */
 void semaphore_signal(int semaphore) {
-	/**
-	 * if less than 1, takes the first WAIT thread and makes it RUNNABLE on the runqueue
-	 */
+	int next_thread;
+	char print[100];
+	// disable alarm while working with semaphore
+	sighold(SIGALRM);
+	sprintf(print, "signaling semaphore %d with value %d\n", semaphore,semaphores[semaphore]->value);
+	perror(print);
 
+
+	if(semaphores[semaphore]->value < 0) {
+
+		// make first thread on the wait queue runnable
+		next_thread = list_shift_int(semaphores[semaphore]->thread_queue);
+		if(next_thread == 0) {
+			perror("no threads on waitqueue\n");
+			exit(-1);
+		}
+
+		sprintf(print, "signaling thread %d\n", next_thread);
+				perror(print);
+
+		threads[next_thread]->state = RUNNABLE;
+		list_append_int(runqueue, next_thread);
+	}
+	semaphores[semaphore]->value += 1;
+	sigrelse(SIGALRM);
 }
 
 /**
@@ -281,6 +328,16 @@ void semaphore_signal(int semaphore) {
  * Prints warning message if the current value of the semaphore is not the same as the initial value.
  */
 void destroy_semaphore(int semaphore) {
+
+	// check if any threads are still on the wait queue
+	if(list_shift_int(semaphores[semaphore]->thread_queue) != 0 ) {
+		perror("semaphore wait queue is not empty!\n");
+		exit(-1);
+	} else {
+		// else decrement semaphore counter and detroy the queue
+		next_semaphore_index--;
+		list_destroy(&(semaphores[semaphore]->thread_queue));
+	}
 
 }
 
@@ -320,12 +377,16 @@ void scheduler() {
 
 	// check if thread has completed
 	if (threads[current_thread]->state == EXIT) {
-		// do exit stuff?
 #if DEBUG == 1
 		sprintf(print, "thread %d completed, run time: %d\n", current_thread, threads[current_thread]->total_time);
 		perror(print);
 #endif
 
+	} else if (threads[current_thread]->state == WAIT) {
+#if DEBUG == 1
+		sprintf(print, "thread %d blocked\n", current_thread);
+		perror(print);
+#endif
 	} else {
 		// else append it to the end of the runqueue
 		threads[current_thread]->state = RUNNABLE;
@@ -347,7 +408,12 @@ void scheduler() {
 #if DEBUG == 1
 		perror("all threads completed\n");
 #endif
+		//turn off timer
+
+
 		sighold(SIGALRM);
+		it.it_interval.tv_usec = 0;
+		it.it_value.tv_usec = 0;
 		return;
 	} else {
 		// else run next thread on queue

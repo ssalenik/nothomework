@@ -56,9 +56,9 @@ int main()
     init_my_threads();
 
     /* 250 ms */
-    set_quantum_size(250);
+    set_quantum_size(600);
 
-    //counter_mutex = create_semaphore(1);
+    counter_mutex = create_semaphore(1);
 
     for(j=0; j<thread_num; j++)
     {
@@ -71,7 +71,7 @@ int main()
     /* When this function returns, all threads should have exited. */
     runthreads();
     
-    //destroy_semaphore(counter_mutex);
+    destroy_semaphore(counter_mutex);
 
     /* Print threads informations after run */
     my_threads_state();
@@ -92,7 +92,7 @@ void handler ()
         /* If you remove this protection, you should be able to see different
          * out of every time you run this program.  With this protection, you
          * should always be able to see result to be 151402.656521 */
-        //semaphore_wait(counter_mutex);       /* down semaphore */
+        semaphore_wait(counter_mutex);       /* down semaphore */
 
         /* START CRITICAL REGION */
         int j;
@@ -103,7 +103,7 @@ void handler ()
 
         /* END CRITICAL REGION */    
 
-        //semaphore_signal(counter_mutex);       /* up semaphore */
+        semaphore_signal(counter_mutex);       /* up semaphore */
     }
     
     exit_my_thread(); /* exit thread */

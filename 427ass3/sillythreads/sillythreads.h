@@ -20,7 +20,7 @@
 
 #define THREADS_MAX 20		// defines the maximum number of threads allowed
 #define SEMAPHORES_NUM	20	// defines space allocated for semaphores initially
-#define QUANTUM_DEFAULT 1000	// sets default quantum size in us; this is also the minimum allowed
+#define QUANTUM_DEFAULT 500	// sets default quantum size in us; this is also the minimum allowed
 
 /* includes */
 #include <slack/std.h>
