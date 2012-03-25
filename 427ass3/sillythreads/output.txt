@@ -1,0 +1,26 @@
+State of Threads:
+|  Thread Name  |  State  |  run time (us)|
+|       thread 0| RUNNABLE|              0|
+|       thread 1| RUNNABLE|              0|
+|       thread 2| RUNNABLE|              0|
+|       thread 3| RUNNABLE|              0|
+|       thread 4| RUNNABLE|              0|
+|       thread 5| RUNNABLE|              0|
+|       thread 6| RUNNABLE|              0|
+|       thread 7| RUNNABLE|              0|
+|       thread 8| RUNNABLE|              0|
+|       thread 9| RUNNABLE|              0|
+State of Threads:
+|  Thread Name  |  State  |  run time (us)|
+|       thread 0|     EXIT|            600|
+|       thread 1|     EXIT|           2400|
+|       thread 2|     EXIT|           3600|
+|       thread 3|     EXIT|           3600|
+|       thread 4|     EXIT|           3600|
+|       thread 5|     EXIT|           3600|
+|       thread 6|     EXIT|           3600|
+|       thread 7|     EXIT|           3600|
+|       thread 8|     EXIT|           3600|
+|       thread 9|     EXIT|           3600|
+The counter is 50
+The result is 151402.656521

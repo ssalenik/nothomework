@@ -85,8 +85,6 @@ int main()
 void handler ()
 {
     int i;
-
-    perror("starting thread");
     for(i=0; i < 5; i++)
     {
         /* If you remove this protection, you should be able to see different

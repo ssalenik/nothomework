@@ -18,6 +18,8 @@
 #include "sillythreads.h"
 
 // debug mode = 1
+// will print all debug information
+// 0 will only print errors required by the API
 #define DEBUG 1
 
 /* global vars */
@@ -69,13 +71,16 @@ int init_my_threads() {
 	 * 	 since list_shift_int returns 0 when no items remain, start indexing threads and semaphores at 1
 	 *
 	 */
+	// init threadblock
 	threads = (thread_control_block_t **) malloc(
 			sizeof(thread_control_block_t *) * (THREADS_MAX + 1));
 	threads[0] = NULL;
 	next_thread_index = 1;
 
+	//creat runqueue
 	runqueue = list_create(destroy_runqueue);
 
+	// init semaphore table
 	semaphores = (semaphore_t **) malloc(
 			sizeof(semaphore_t *) * (SEMAPHORES_NUM + 1));
 	semaphores[0] = NULL;
@@ -89,8 +94,6 @@ int init_my_threads() {
 		perror("malloc");
 		exit(1);
 	}
-
-	getcontext(&main_context);
 
 	return 0;
 }
@@ -110,9 +113,6 @@ int create_my_thread(char *threadname, void(*threadfunc)(), int stacksize) {
 	 * threadname is stored in the thread control block.
 	 *
 	 * A new thread is in the RUNNABLE  state when it is inserted into the system.
-	 *
-	 * New thread *may* be included in the runqueue
-	 *
 	 */
 
 	// first check if we can create any more threads
@@ -122,10 +122,12 @@ int create_my_thread(char *threadname, void(*threadfunc)(), int stacksize) {
 				THREADS_MAX);
 		return -1;
 	} else if (stacksize <= 0) {
+		// make sure that stacksize is not 0 or less
 		fprintf(stderr, "stacksize must be greater than zero!\n");
 		return -1;
 	}
 
+	// malloc new thread entry
 	thread_control_block_t* new_thread = (thread_control_block_t *) malloc(
 			sizeof(thread_control_block_t *));
 
@@ -133,14 +135,16 @@ int create_my_thread(char *threadname, void(*threadfunc)(), int stacksize) {
 	new_thread->run_time = 0;
 	new_thread->total_time = 0;
 	new_thread->stacksize = stacksize;
-	new_thread->thread_name = (char *)malloc(sizeof(char)*strlen(threadname));
+	new_thread->thread_name = (char *) malloc(
+			sizeof(char) * strlen(threadname));
 	strcpy(new_thread->thread_name, threadname); // copy name to make sure its not changed externally
 	new_thread->state = RUNNABLE;
 	new_thread->thread_id = next_thread_index;
 	new_thread->threadfunc = threadfunc;
 
-	new_thread->context = (ucontext_t *)malloc(sizeof(ucontext_t));
+	new_thread->context = (ucontext_t *) malloc(sizeof(ucontext_t));
 
+	// make new thread context
 	if (mkcontext(new_thread->context, threadfunc, stacksize) != 0) {
 		fprintf(stderr, "thread context creation failed");
 		return -1;
@@ -149,7 +153,9 @@ int create_my_thread(char *threadname, void(*threadfunc)(), int stacksize) {
 	// put in thread table
 	threads[next_thread_index] = new_thread;
 
+#if DEBUG == 1
 	printf("new thread created: %s\n", threads[next_thread_index]->thread_name);
+#endif
 
 	next_thread_index++;
 
@@ -167,9 +173,8 @@ void exit_my_thread() {
 
 	threads[current_thread]->state = EXIT;
 #if DEBUG == 1
-		perror("thread ended");
+	perror("thread ended");
 #endif
-
 
 	while (1)
 		; // wait for next alarm to go to the scheduler
@@ -183,13 +188,12 @@ void exit_my_thread() {
 void runthreads() {
 	int i;
 
-
 	current_thread = 1;
 
 	setup_signals();
 
 	//queue all the threads
-	for(i = 2; i < next_thread_index; i++) {
+	for (i = 2; i < next_thread_index; i++) {
 		list_append_int(runqueue, i);
 	}
 
@@ -201,16 +205,22 @@ void runthreads() {
 		perror("setitiimer");
 
 	/* force a swap to the first context */
-	printf("ready to start\n");
+#if DEBUG == 1
+	printf("starting the first thread\n");
+#endif
+
 	swapcontext(&main_context, threads[current_thread]->context);
 
-	printf("destorying runqueue\n");
+#if DEBUG == 1
+	printf("returned to main context; destorying runqueue\n");
+#endif
+
 	list_destroy(&runqueue);
 }
 
 /**
  * Sets the quantum size of the round robin scheduler in microseconds.
- * The minimum and default quantum is 1000us
+ * The minimum and default quantum is 500us
  */
 void set_quantum_size(int quantum_size) {
 	if (quantum_size < QUANTUM_DEFAULT) {
@@ -232,8 +242,6 @@ int create_semaphore(int value) {
 	 *
 	 */
 
-	printf("creating semaphore %d with initial value %d\n", next_semaphore_index, value);
-
 	// check if we can make another semaphore
 	// TODO: implement memory allocation if we need more semaphores
 	if (next_semaphore_index == (SEMAPHORES_NUM + 1)) {
@@ -252,7 +260,11 @@ int create_semaphore(int value) {
 	// add it to list of semaphores
 	semaphores[next_semaphore_index] = sem;
 
-	printf("semaphore %d created with value %d\n", semaphores[next_semaphore_index]->index, semaphores[next_semaphore_index]->value);
+#if DEBUG == 1
+	printf("semaphore %d created with value %d\n",
+			semaphores[next_semaphore_index]->index,
+			semaphores[next_semaphore_index]->value);
+#endif
 
 	next_semaphore_index++;
 
@@ -264,16 +276,25 @@ int create_semaphore(int value) {
  * If the value goes below 0, the thread is put into a WAIT state.
  */
 void semaphore_wait(int semaphore) {
-	char print[100];
+
 	// disable alarm while working with semaphore
 	sighold(SIGALRM);
-	sprintf(print, "value of semaphore %d is %d\n", semaphore,semaphores[semaphore]->value);
+
+#if DEBUG == 1
+	char print[100];
+	sprintf(print, "wait called on semaphore %d with value %d\n", semaphore,
+			semaphores[semaphore]->value);
 	perror(print);
+#endif
 
 	semaphores[semaphore]->value -= 1;
-	if(semaphores[semaphore]->value < 0) {
+	if (semaphores[semaphore]->value < 0) {
+
+#if DEBUG == 1
 		sprintf(print, "thread %d put on waitqueue\n", current_thread);
 		perror(print);
+#endif
+
 		// block thread
 		threads[current_thread]->state = WAIT;
 		// put it on the wait queue
@@ -281,7 +302,8 @@ void semaphore_wait(int semaphore) {
 
 		//unblock alarm and wait for scheduler to take over
 		sigrelse(SIGALRM);
-		while(threads[current_thread]->state == WAIT); // signal should make the thread RUNNABLE again
+		while (threads[current_thread]->state == WAIT)
+			; // when semaphore is signaled thread will be RUNNABLE again and return from this function
 	} else {
 		//don't block thread, unblock alarm and go back to the thread
 		sigrelse(SIGALRM);
@@ -294,24 +316,29 @@ void semaphore_wait(int semaphore) {
  */
 void semaphore_signal(int semaphore) {
 	int next_thread;
-	char print[100];
 	// disable alarm while working with semaphore
 	sighold(SIGALRM);
-	sprintf(print, "signaling semaphore %d with value %d\n", semaphore,semaphores[semaphore]->value);
+
+#if DEBUG == 1
+	char print[100];
+	sprintf(print, "signaling semaphore %d with value %d\n", semaphore,
+			semaphores[semaphore]->value);
 	perror(print);
+#endif
 
+	if (semaphores[semaphore]->value < 0) {
 
-	if(semaphores[semaphore]->value < 0) {
-
-		// make first thread on the wait queue runnable
+		// make first thread on the wait queue RUNNABLE
 		next_thread = list_shift_int(semaphores[semaphore]->thread_queue);
-		if(next_thread == 0) {
+		if (next_thread == 0) {
 			perror("no threads on waitqueue\n");
 			exit(-1);
 		}
 
+#if DEBUG == 1
 		sprintf(print, "signaling thread %d\n", next_thread);
-				perror(print);
+		perror(print);
+#endif
 
 		threads[next_thread]->state = RUNNABLE;
 		list_append_int(runqueue, next_thread);
@@ -329,11 +356,22 @@ void semaphore_signal(int semaphore) {
  */
 void destroy_semaphore(int semaphore) {
 
+#if DEBUG == 1
+	printf("destorying semaphore %d\n", semaphore);
+#endif
+
 	// check if any threads are still on the wait queue
-	if(list_shift_int(semaphores[semaphore]->thread_queue) != 0 ) {
+	if (list_shift_int(semaphores[semaphore]->thread_queue) != 0) {
 		perror("semaphore wait queue is not empty!\n");
 		exit(-1);
 	} else {
+		// check value of semaphore
+		if (semaphores[semaphore]->value != semaphores[semaphore]->value) {
+			printf(
+					"warning: current value of semaphore (%d) does not equal initial value (%d)",
+					semaphores[semaphore]->value,
+					semaphores[semaphore]->init_value);
+		}
 		// else decrement semaphore counter and detroy the queue
 		next_semaphore_index--;
 		list_destroy(&(semaphores[semaphore]->thread_queue));
@@ -351,12 +389,11 @@ void my_threads_state() {
 	 */
 	int i;
 
-	//TODO: ensure nice, tabular output formatting
 	printf("State of Threads:\n");
-	printf("|  Thread Name  |  State  |  run time  |\n");
+	printf("|  Thread Name  |  State  |  run time (us)|\n");
 
 	for (i = 1; i < next_thread_index; i++) {
-		printf("|%15s|%9s|%12d|\n", threads[i]->thread_name,
+		printf("|%15s|%9s|%15d|\n", threads[i]->thread_name,
 				state_str[threads[i]->state], threads[i]->total_time);
 	}
 
@@ -368,9 +405,11 @@ void my_threads_state() {
  * The scheduling algorithm; selects the next context to run, then starts it.
  */
 void scheduler() {
-	char print[100];
-
 	sighold(SIGALRM);
+
+#if DEBUG == 1
+	char print[100];
+#endif
 
 	// increment current thread run time
 	threads[current_thread]->total_time += quantum;
@@ -378,24 +417,29 @@ void scheduler() {
 	// check if thread has completed
 	if (threads[current_thread]->state == EXIT) {
 #if DEBUG == 1
-		sprintf(print, "thread %d completed, run time: %d\n", current_thread, threads[current_thread]->total_time);
+		sprintf(print, "thread %d completed, run time: %d\n", current_thread,
+				threads[current_thread]->total_time);
 		perror(print);
 #endif
 
 	} else if (threads[current_thread]->state == WAIT) {
+
 #if DEBUG == 1
 		sprintf(print, "thread %d blocked\n", current_thread);
 		perror(print);
 #endif
+
 	} else {
 		// else append it to the end of the runqueue
 		threads[current_thread]->state = RUNNABLE;
 		list_append_int(runqueue, current_thread);
 
 #if DEBUG == 1
-		sprintf(print, "thead %d put on runqueue, run time: %d\n", current_thread, threads[current_thread]->total_time);
+		sprintf(print, "thread %d put on runqueue, run time: %d\n",
+				current_thread, threads[current_thread]->total_time);
 		perror(print);
 #endif
+
 	}
 
 	// get the next thread waiting to run from the run queue
@@ -408,18 +452,19 @@ void scheduler() {
 #if DEBUG == 1
 		perror("all threads completed\n");
 #endif
+
 		//turn off timer
-
-
 		sighold(SIGALRM);
 		it.it_interval.tv_usec = 0;
 		it.it_value.tv_usec = 0;
+
+		//returns to main context
 		return;
 	} else {
 		// else run next thread on queue
 		threads[current_thread]->state = RUNNING;
 #if DEBUG == 1
-		sprintf(print, "scheduling thead %d\n", current_thread);
+		sprintf(print, "scheduling thread %d\n", current_thread);
 		perror(print);
 #endif
 		sigrelse(SIGALRM);
@@ -434,7 +479,6 @@ void scheduler() {
  *Creates a new context to run the scheduler in, masks signals, then swaps contexts saving the previously executing thread and jumping to the scheduler.
  */
 void timer_interrupt(int j, siginfo_t *si, void *old_context) {
-	//printf("timer\n");
 	/* Create new scheduler context */
 	getcontext(&signal_context);
 	signal_context.uc_stack.ss_sp = signal_stack;
@@ -444,7 +488,6 @@ void timer_interrupt(int j, siginfo_t *si, void *old_context) {
 	sigemptyset(&signal_context.uc_sigmask);
 	makecontext(&signal_context, scheduler, 0);
 	/* save running thread, jump to scheduler */
-	//printf("time done\n");
 	swapcontext(threads[current_thread]->context, &signal_context);
 }
 
@@ -475,12 +518,16 @@ int mkcontext(ucontext_t *uc, void(*threadfunc)(), int stacksize) {
 	/* setup the function we're going to, and n-1 arguments. */
 	makecontext(uc, threadfunc, 0);
 
+#if DEBUG == 1
 	printf("context is %lx\n", (unsigned long) uc);
+#endif
 
 	return 0;
 }
 
 /**
+ * Taken from the swap.c example provided on http://cgi.cs.mcgill.ca/~xcai9/2012_comp_310.html
+ *
  * Set up SIGALRM signal handler
  */
 void setup_signals(void) {

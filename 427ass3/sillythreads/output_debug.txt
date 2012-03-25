@@ -1,0 +1,663 @@
+semaphore 1 created with value 1
+context is 24b7270
+new thread created: thread 0
+context is 24b8670
+new thread created: thread 1
+context is 24b9a70
+new thread created: thread 2
+context is 24bae70
+new thread created: thread 3
+context is 24bc270
+new thread created: thread 4
+context is 24bd670
+new thread created: thread 5
+context is 24bea70
+new thread created: thread 6
+context is 24bfe70
+new thread created: thread 7
+context is 24c1270
+new thread created: thread 8
+context is 24c2670
+new thread created: thread 9
+State of Threads:
+|  Thread Name  |  State  |  run time (us)|
+|       thread 0| RUNNABLE|              0|
+|       thread 1| RUNNABLE|              0|
+|       thread 2| RUNNABLE|              0|
+|       thread 3| RUNNABLE|              0|
+|       thread 4| RUNNABLE|              0|
+|       thread 5| RUNNABLE|              0|
+|       thread 6| RUNNABLE|              0|
+|       thread 7| RUNNABLE|              0|
+|       thread 8| RUNNABLE|              0|
+|       thread 9| RUNNABLE|              0|
+starting the first thread
+wait called on semaphore 1 with value 1
+: Success
+signaling semaphore 1 with value 0
+: Success
+wait called on semaphore 1 with value 1
+: Success
+signaling semaphore 1 with value 0
+: Success
+wait called on semaphore 1 with value 1
+: Success
+signaling semaphore 1 with value 0
+: Success
+wait called on semaphore 1 with value 1
+: Success
+signaling semaphore 1 with value 0
+: Success
+wait called on semaphore 1 with value 1
+: Success
+thead 1 put on runqueue, run time: 600
+: Success
+scheduling thead 2
+: Success
+wait called on semaphore 1 with value 0
+: Success
+thread 2 put on waitqueue
+: Success
+thread 2 blocked
+: Success
+scheduling thead 3
+: Success
+wait called on semaphore 1 with value -1
+: Success
+thread 3 put on waitqueue
+: Success
+thread 3 blocked
+: Success
+scheduling thead 4
+: Success
+wait called on semaphore 1 with value -2
+: Success
+thread 4 put on waitqueue
+: Success
+thread 4 blocked
+: Success
+scheduling thead 5
+: Success
+wait called on semaphore 1 with value -3
+: Success
+thread 5 put on waitqueue
+: Success
+thread 5 blocked
+: Success
+scheduling thead 6
+: Success
+wait called on semaphore 1 with value -4
+: Success
+thread 6 put on waitqueue
+: Success
+thread 6 blocked
+: Success
+scheduling thead 7
+: Success
+wait called on semaphore 1 with value -5
+: Success
+thread 7 put on waitqueue
+: Success
+thread 7 blocked
+: Success
+scheduling thead 8
+: Success
+wait called on semaphore 1 with value -6
+: Success
+thread 8 put on waitqueue
+: Success
+thread 8 blocked
+: Success
+scheduling thead 9
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 9 put on waitqueue
+: Success
+thread 9 blocked
+: Success
+scheduling thead 10
+: Success
+wait called on semaphore 1 with value -8
+: Success
+thread 10 put on waitqueue
+: Success
+thread 10 blocked
+: Success
+scheduling thead 1
+: Success
+signaling semaphore 1 with value -9
+: Success
+signaling thread 2
+: Success
+thread ended: Success
+thread 1 completed, run time: 1200
+: Success
+scheduling thead 2
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 3
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 2 put on waitqueue
+: Success
+thread 2 blocked
+: Success
+scheduling thead 3
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 4
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 3 put on waitqueue
+: Success
+thread 3 blocked
+: Success
+scheduling thead 4
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 5
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 4 put on waitqueue
+: Success
+thread 4 blocked
+: Success
+scheduling thead 5
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 6
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 5 put on waitqueue
+: Success
+thread 5 blocked
+: Success
+scheduling thead 6
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 7
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 6 put on waitqueue
+: Success
+thread 6 blocked
+: Success
+scheduling thead 7
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 8
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 7 put on waitqueue
+: Success
+thread 7 blocked
+: Success
+scheduling thead 8
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 9
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 8 put on waitqueue
+: Success
+thread 8 blocked
+: Success
+scheduling thead 9
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 10
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 9 put on waitqueue
+: Success
+thread 9 blocked
+: Success
+scheduling thead 10
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 2
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 10 put on waitqueue
+: Success
+thread 10 blocked
+: Success
+scheduling thead 2
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 3
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 2 put on waitqueue
+: Success
+thread 2 blocked
+: Success
+scheduling thead 3
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 4
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 3 put on waitqueue
+: Success
+thread 3 blocked
+: Success
+scheduling thead 4
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 5
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 4 put on waitqueue
+: Success
+thread 4 blocked
+: Success
+scheduling thead 5
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 6
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 5 put on waitqueue
+: Success
+thread 5 blocked
+: Success
+scheduling thead 6
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 7
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 6 put on waitqueue
+: Success
+thread 6 blocked
+: Success
+scheduling thead 7
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 8
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 7 put on waitqueue
+: Success
+thread 7 blocked
+: Success
+scheduling thead 8
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 9
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 8 put on waitqueue
+: Success
+thread 8 blocked
+: Success
+scheduling thead 9
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 10
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 9 put on waitqueue
+: Success
+thread 9 blocked
+: Success
+scheduling thead 10
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 2
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 10 put on waitqueue
+: Success
+thread 10 blocked
+: Success
+scheduling thead 2
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 3
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 2 put on waitqueue
+: Success
+thread 2 blocked
+: Success
+scheduling thead 3
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 4
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 3 put on waitqueue
+: Success
+thread 3 blocked
+: Success
+scheduling thead 4
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 5
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 4 put on waitqueue
+: Success
+thread 4 blocked
+: Success
+scheduling thead 5
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 6
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 5 put on waitqueue
+: Success
+thread 5 blocked
+: Success
+scheduling thead 6
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 7
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 6 put on waitqueue
+: Success
+thread 6 blocked
+: Success
+scheduling thead 7
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 8
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 7 put on waitqueue
+: Success
+thread 7 blocked
+: Success
+scheduling thead 8
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 9
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 8 put on waitqueue
+: Success
+thread 8 blocked
+: Success
+scheduling thead 9
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 10
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 9 put on waitqueue
+: Success
+thread 9 blocked
+: Success
+scheduling thead 10
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 2
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 10 put on waitqueue
+: Success
+thread 10 blocked
+: Success
+scheduling thead 2
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 3
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 2 put on waitqueue
+: Success
+thread 2 blocked
+: Success
+scheduling thead 3
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 4
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 3 put on waitqueue
+: Success
+thread 3 blocked
+: Success
+scheduling thead 4
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 5
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 4 put on waitqueue
+: Success
+thread 4 blocked
+: Success
+scheduling thead 5
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 6
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 5 put on waitqueue
+: Success
+thread 5 blocked
+: Success
+scheduling thead 6
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 7
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 6 put on waitqueue
+: Success
+thread 6 blocked
+: Success
+scheduling thead 7
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 8
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 7 put on waitqueue
+: Success
+thread 7 blocked
+: Success
+scheduling thead 8
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 9
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 8 put on waitqueue
+: Success
+thread 8 blocked
+: Success
+scheduling thead 9
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 10
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 9 put on waitqueue
+: Success
+thread 9 blocked
+: Success
+scheduling thead 10
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 2
+: Success
+wait called on semaphore 1 with value -7
+: Success
+thread 10 put on waitqueue
+: Success
+thread 10 blocked
+: Success
+scheduling thead 2
+: Success
+signaling semaphore 1 with value -8
+: Success
+signaling thread 3
+: Success
+thread ended: Success
+thread 2 completed, run time: 3600
+: Success
+scheduling thead 3
+: Success
+signaling semaphore 1 with value -7
+: Success
+signaling thread 4
+: Success
+thread ended: Success
+thread 3 completed, run time: 3600
+: Success
+scheduling thead 4
+: Success
+signaling semaphore 1 with value -6
+: Success
+signaling thread 5
+: Success
+thread ended: Success
+thread 4 completed, run time: 3600
+: Success
+scheduling thead 5
+: Success
+signaling semaphore 1 with value -5
+: Success
+signaling thread 6
+: Success
+thread ended: Success
+thread 5 completed, run time: 3600
+: Success
+scheduling thead 6
+: Success
+signaling semaphore 1 with value -4
+: Success
+signaling thread 7
+: Success
+thread ended: Success
+thread 6 completed, run time: 3600
+: Success
+scheduling thead 7
+: Success
+signaling semaphore 1 with value -3
+: Success
+signaling thread 8
+: Success
+thread ended: Success
+thread 7 completed, run time: 3600
+: Success
+scheduling thead 8
+: Success
+signaling semaphore 1 with value -2
+: Success
+signaling thread 9
+: Success
+thread ended: Success
+thread 8 completed, run time: 3600
+: Success
+scheduling thead 9
+: Success
+signaling semaphore 1 with value -1
+: Success
+signaling thread 10
+: Success
+thread ended: Success
+thread 9 completed, run time: 3600
+: Success
+scheduling thead 10
+: Success
+signaling semaphore 1 with value 0
+: Success
+thread ended: Success
+thread 10 completed, run time: 3600
+: Success
+all threads completed
+: Invalid argument
+returned to main context; destorying runqueue
+State of Threads:
+|  Thread Name  |  State  |  run time (us)|
+|       thread 0|     EXIT|           1200|
+|       thread 1|     EXIT|           3600|
+|       thread 2|     EXIT|           3600|
+|       thread 3|     EXIT|           3600|
+|       thread 4|     EXIT|           3600|
+|       thread 5|     EXIT|           3600|
+|       thread 6|     EXIT|           3600|
+|       thread 7|     EXIT|           3600|
+|       thread 8|     EXIT|           3600|
+|       thread 9|     EXIT|           3600|
+The counter is 50
+The result is 151402.656521
