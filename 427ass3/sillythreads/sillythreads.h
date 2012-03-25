@@ -30,6 +30,7 @@
 #include <string.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <sys/time.h>
 
 /* data structures */
 typedef struct {

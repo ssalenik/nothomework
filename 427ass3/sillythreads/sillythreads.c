@@ -17,6 +17,9 @@
  */
 #include "sillythreads.h"
 
+// debug mode = 1
+#define DEBUG 1
+
 /* global vars */
 
 // the runqueue
@@ -46,7 +49,7 @@ ucontext_t signal_context; /* the interrupt context */
 void *signal_stack; /* global interrupt stack */
 
 // main context
-ucontext_t main_context; //the main context, to be able to return to run_threads
+static ucontext_t main_context; //the main context, to be able to return to run_threads
 
 /**
  * Initialized global data structures:
@@ -83,6 +86,8 @@ int init_my_threads() {
 		perror("malloc");
 		exit(1);
 	}
+
+	getcontext(&main_context);
 
 	return 0;
 }
@@ -125,10 +130,13 @@ int create_my_thread(char *threadname, void(*threadfunc)(), int stacksize) {
 	new_thread->run_time = 0;
 	new_thread->total_time = 0;
 	new_thread->stacksize = stacksize;
+	new_thread->thread_name = (char *)malloc(sizeof(char)*strlen(threadname));
 	strcpy(new_thread->thread_name, threadname); // copy name to make sure its not changed externally
 	new_thread->state = RUNNABLE;
 	new_thread->thread_id = next_thread_index;
 	new_thread->threadfunc = threadfunc;
+
+	new_thread->context = (ucontext_t *)malloc(sizeof(ucontext_t));
 
 	if (mkcontext(new_thread->context, threadfunc, stacksize) != 0) {
 		fprintf(stderr, "thread context creation failed");
@@ -137,6 +145,8 @@ int create_my_thread(char *threadname, void(*threadfunc)(), int stacksize) {
 
 	// put in thread table
 	threads[next_thread_index] = new_thread;
+
+	printf("new thread created: %s\n", threads[next_thread_index]->thread_name);
 
 	next_thread_index++;
 
@@ -153,6 +163,13 @@ void exit_my_thread() {
 	 */
 
 	threads[current_thread]->state = EXIT;
+#if DEBUG == 1
+		perror("thread ended");
+#endif
+
+
+	while (1)
+		; // wait for next alarm to go to the scheduler
 
 }
 
@@ -161,20 +178,41 @@ void exit_my_thread() {
  * Activates the thread switcher.
  */
 void runthreads() {
+	int i;
+	struct itimerval it;
+
 	current_thread = 1;
+
+	setup_signals();
+
+	//queue all the threads
+	for(i = 2; i < next_thread_index; i++) {
+		list_append_int(runqueue, i);
+	}
+
+	/* setup our timer */
+	it.it_interval.tv_sec = 0;
+	it.it_interval.tv_usec = quantum;
+	it.it_value = it.it_interval;
+	if (setitimer(ITIMER_REAL, &it, NULL))
+		perror("setitiimer");
+
+	/* force a swap to the first context */
+	printf("ready to start\n");
+	swapcontext(&main_context, threads[current_thread]->context);
 }
 
 /**
- * Sets the quantum size of the round robin scheduler in milliseconds.
- * The default quantum is 1000us (1ms)
+ * Sets the quantum size of the round robin scheduler in microseconds.
+ * The minimum and default quantum is 1000us
  */
 void set_quantum_size(int quantum_size) {
-	if (quantum_size * 1000 < QUANTUM_DEFAULT) {
+	if (quantum_size < QUANTUM_DEFAULT) {
 		quantum = QUANTUM_DEFAULT;
 		printf("warning: quantum size too small, setting to default: %dus\n",
 				QUANTUM_DEFAULT);
 	} else
-		quantum = 1000 * quantum_size;
+		quantum = quantum_size;
 }
 
 /**
@@ -258,9 +296,9 @@ void my_threads_state() {
 
 	//TODO: ensure nice, tabular output formatting
 	printf("State of Threads:\n");
-	printf("|  Thread Name  |  State  |  run time  |");
+	printf("|  Thread Name  |  State  |  run time  |\n");
 
-	for (i = 1; i < next_semaphore_index; i++) {
+	for (i = 1; i < next_thread_index; i++) {
 		printf("|%15s|%9s|%12d|\n", threads[i]->thread_name,
 				state_str[threads[i]->state], threads[i]->total_time);
 	}
@@ -273,15 +311,30 @@ void my_threads_state() {
  * The scheduling algorithm; selects the next context to run, then starts it.
  */
 void scheduler() {
-	//printf("scheduling out thread %d\n", curcontext);
+	char print[100];
+
+	sighold(SIGALRM);
+
+	// increment current thread run time
+	threads[current_thread]->total_time += quantum;
 
 	// check if thread has completed
-	if(threads[current_thread]->state == EXIT) {
+	if (threads[current_thread]->state == EXIT) {
 		// do exit stuff?
+#if DEBUG == 1
+		sprintf(print, "thread %d completed, run time: %d\n", current_thread, threads[current_thread]->total_time);
+		perror(print);
+#endif
+
 	} else {
 		// else append it to the end of the runqueue
 		threads[current_thread]->state = RUNNABLE;
 		list_append_int(runqueue, current_thread);
+
+#if DEBUG == 1
+		sprintf(print, "thead %d put on runqueue, run time: %d\n", current_thread, threads[current_thread]->total_time);
+		perror(print);
+#endif
 	}
 
 	// get the next thread waiting to run from the run queue
@@ -289,12 +342,21 @@ void scheduler() {
 
 	// check if there is a next item
 	// current_thread is 0 if there is not
-	if(current_thread == 0) {
+	if (current_thread == 0) {
 		// return to main context
-		setcontext(&main_context);
+#if DEBUG == 1
+		perror("all threads completed\n");
+#endif
+		sighold(SIGALRM);
+		return;
 	} else {
 		// else run next thread on queue
 		threads[current_thread]->state = RUNNING;
+#if DEBUG == 1
+		sprintf(print, "scheduling thead %d\n", current_thread);
+		perror(print);
+#endif
+		sigrelse(SIGALRM);
 		setcontext(threads[current_thread]->context);
 	}
 }
@@ -306,14 +368,17 @@ void scheduler() {
  *Creates a new context to run the scheduler in, masks signals, then swaps contexts saving the previously executing thread and jumping to the scheduler.
  */
 void timer_interrupt(int j, siginfo_t *si, void *old_context) {
+	//printf("timer\n");
 	/* Create new scheduler context */
 	getcontext(&signal_context);
 	signal_context.uc_stack.ss_sp = signal_stack;
 	signal_context.uc_stack.ss_size = 4096;
 	signal_context.uc_stack.ss_flags = 0;
+	signal_context.uc_link = &main_context; // returns to main context
 	sigemptyset(&signal_context.uc_sigmask);
 	makecontext(&signal_context, scheduler, 0);
 	/* save running thread, jump to scheduler */
+	//printf("time done\n");
 	swapcontext(threads[current_thread]->context, &signal_context);
 }
 
@@ -338,12 +403,13 @@ int mkcontext(ucontext_t *uc, void(*threadfunc)(), int stacksize) {
 	uc->uc_stack.ss_sp = stack;
 	uc->uc_stack.ss_size = stacksize;
 	uc->uc_stack.ss_flags = 0;
+	uc->uc_link = &main_context; // returns to main context
 	sigemptyset(&uc->uc_sigmask);
 
 	/* setup the function we're going to, and n-1 arguments. */
-	makecontext(uc, (void(*)()) threadfunc, 0);
+	makecontext(uc, threadfunc, 0);
 
-	//printf("context is %lx\n", (unsigned long) uc);
+	printf("context is %lx\n", (unsigned long) uc);
 
 	return 0;
 }
