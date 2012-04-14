@@ -24,6 +24,7 @@
 #define DIRECTORY_INDEX 0
 #define FAT_INDEX 1
 #define FREE_INDEX 2
+#define DESCRIPTOR_OFFSET 3
 
 typedef enum {USED, FREE}block_status_t;
 
