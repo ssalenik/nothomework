@@ -17,19 +17,29 @@ int num_files;
 
 /* private functions */
 int init() {
-	int i;
 	//calculate number of blocks
 	NUM_BLOCKS = MAX_FILES + 3; //free blocks + root dir + fat + free blocks
 
 	//create free list
 	free_list = list_create(destroy_free_list);
 
+	//create other stuff
+	directory = (directory_entry_t*) malloc(
+			MAX_FILES * sizeof(directory_entry_t));
+	fat = (fat_entry_t*) malloc(NUM_BLOCKS * sizeof(fat_entry_t));
+	file_descriptor = (file_descriptor_t*) malloc(
+			MAX_FILES * sizeof(file_descriptor_t));
+
+	//set fat for first 3
+	fat[1].block_index = 1;
+	fat[2].block_index = 2;
+
 	//determine block size
 	BLOCK_SIZE = MAX_FILES * sizeof(directory_entry_t);
 	if (MAX_FILES * sizeof(file_descriptor_t) > BLOCK_SIZE)
 		BLOCK_SIZE = MAX_FILES * sizeof(file_descriptor_t);
-	if (MAX_FILES * sizeof(fat_entry_t) > BLOCK_SIZE)
-		BLOCK_SIZE = MAX_FILES * sizeof(fat_entry_t);
+	if (NUM_BLOCKS * sizeof(fat_entry_t) > BLOCK_SIZE)
+		BLOCK_SIZE = NUM_BLOCKS * sizeof(fat_entry_t);
 	if (NUM_BLOCKS * sizeof(int) > BLOCK_SIZE)
 		BLOCK_SIZE = NUM_BLOCKS * sizeof(block_status_t); // should never happen
 
@@ -62,7 +72,9 @@ int read_fat() {
 	return 0;
 }
 int write_free() {
-	int i, block;
+	int i = 0;
+	int block;
+
 	block_status_t* temp = (block_status_t*) malloc(
 			NUM_BLOCKS * sizeof(block_status_t));
 
@@ -86,7 +98,7 @@ int write_free() {
 
 }
 int read_free() {
-	int i;
+	int i = 0;
 	block_status_t* temp = (block_status_t*) malloc(
 			NUM_BLOCKS * sizeof(block_status_t));
 
@@ -106,29 +118,64 @@ int read_free() {
 	}
 }
 
-/* public functions */
+/**
+ * creates and opens a file
+ *
+ * returns file index in descriptor table on success; otherwise -1
+ */
+int create_file(char *name) {
+	int file_index = 0;
+	//check if there is space left
+	if (list_length(free_list) == 0) {
+		perror("no space left in file system!");
+		return -1;
+	} else {
+		num_files++;
+		//find empty slot in directory
+		file_index = 0;
+		while (directory[file_index].fat_index != 0)
+			file_index++;
+
+		//create file entry
+		strcpy(directory[file_index].filename, name);
+		directory[file_index].fat_index = list_shift_int(free_list);
+		fat[file_index].block_index = directory[file_index].fat_index;
+		fat[file_index].next_fat_entry = 0;
+
+		//create file descritor entry
+		file_descriptor[file_index].fat_index = directory[file_index].fat_index;
+
+		write_directory();
+		write_fat();
+		write_free();
+
+		return file_index;
+	}
+}
+
+/***************************************/
+/*         public functions            */
+/***************************************/
 void mksfs(int fresh) {
-	int i;
+	int i = 0;
 	init(); //init data structures
 
 	if (fresh) {
 		// new FS
-		if (init_fresh_disk(NAME, BLOCK_SIZE, NUM_BLOCKS)) {
+		if (init_fresh_disk(NAME, BLOCK_SIZE, NUM_BLOCKS) == 0) {
 			num_files = 0;
 			//make sure everything is empty
-			for(i = 0; i < MAX_FILES; i++){
-				directory[i].date_modified = "";
+			for (i = 0; i < MAX_FILES; i++) {
+				strcpy(directory[i].date_modified, "");
 				directory[i].fat_index = 0;
 				directory[i].file_size = 0;
-				directory[i].filename = "";
+				strcpy(directory[i].filename, "");
 
 				fat[i].block_index = 0;
 				fat[i].next_fat_entry = 0;
 
 				file_descriptor[i].fat_index = 0;
-				file_descriptor[i].read_block = 0;
-				file_descriptor[i].read_offset = 0;
-				file_descriptor[i].write_block = 0;
+				file_descriptor[i].read_index = 0;
 				file_descriptor[i].write_index = 0;
 			}
 			//all blocks except the first 3 are free
@@ -153,7 +200,7 @@ void mksfs(int fresh) {
 
 			//init file descriptor table
 			for (i = 0; i < MAX_FILES; i++) {
-				if(directory[i].fat_index != 0){
+				if (directory[i].fat_index != 0) {
 					num_files++;
 					file_descriptor[i].fat_index = directory[i].fat_index;
 				}
@@ -165,19 +212,60 @@ void mksfs(int fresh) {
 
 }
 void sfs_ls() {
-	int i;
+	int i = 0;
 	printf("total files: %d\n\n", num_files);
 
-	for(i = 0; i < MAX_FILES; i++){
-		printf("%s\t%d\t%s\n",directory[i].filename, directory[i].file_size, directory[i].date_modified);
+	for (i = 0; i < MAX_FILES; i++) {
+		if (directory[i].fat_index != 0) {
+			printf("%d\t%s\t%d\t%s\n", i, directory[i].filename,
+					directory[i].file_size, directory[i].date_modified);
+		}
 	}
 }
+
+/**
+ * opens/creates a file
+ *
+ * returns file index in descriptor table on success; otherwise -1
+ */
 int sfs_fopen(char *name) {
+	int file_index = 0;
 
-	return 0;
+	//check if the file exists
+	if (num_files != 0) {
+		// look for file in directory
+		while (strcmp(directory[file_index].filename, name)
+				&& ++file_index < MAX_FILES)
+			;
+
+		if (file_index < MAX_FILES) {
+			//file already exists, set to append mode
+			file_descriptor[file_index].fat_index =
+					directory[file_index].fat_index;
+			file_descriptor[file_index].write_index =
+					directory[file_index].file_size;
+
+			return file_index;
+		} else {
+			// no such file
+			return create_file(name);
+		}
+	} else {
+		// no files at all, so create one
+		return create_file(name);
+	}
+
 }
+/**
+ * closes file with specified file ID
+ *
+ * checks if file ID is out of bounds
+ */
 void sfs_fclose(int fileID) {
-
+	if (fileID >= MAX_FILES || fileID < 0) {
+		perror("file index out of bounds");
+	} else
+		file_descriptor[fileID].fat_index = 0;
 }
 void sfs_fwrite(int fileID, char *buf, int length) {
 

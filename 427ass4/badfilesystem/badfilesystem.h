@@ -12,6 +12,7 @@
 #include "disk_emu.h"
 #include <slack/std.h>
 #include <slack/list.h>
+#include <string.h>
 
 #define NAME "badfilesystem"
 
@@ -42,10 +43,8 @@ typedef struct {
 
 typedef struct {
 	int fat_index;
-	int write_block;
-	int write_index;	// offset in bytes from the start of the write block
-	int read_block;
-	int read_offset;	// offset in bytes from the start of the read block
+	int write_index;	// index in bytes from the start
+	int read_index;		// index in bytes from the start
 }file_descriptor_t;
 
 typedef struct {
@@ -57,10 +56,10 @@ typedef struct {
 List *free_list;
 list_release_t *destroy_free_list;
 
-directory_entry_t directory[MAX_FILES];
-fat_entry_t fat[MAX_FILES];
+directory_entry_t* directory;
+fat_entry_t* fat;
 
-file_descriptor_t file_descriptor[MAX_FILES];
+file_descriptor_t* file_descriptor;
 
 /*private function prototypes */
 
