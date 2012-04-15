@@ -17,21 +17,21 @@
 #define NAME "badfilesystem"
 
 //file system properties
-#define MAX_FILES 1024	// corresponds to the number of blocks - 3
+#define MAX_FILES 100	// corresponds to the number of blocks - 3
 #define MAX_FILE_NAME 32
 #define DATE_SIZE 32
 
 // location of dir, fat, free block list
 #define DIRECTORY_INDEX 0
 #define FAT_INDEX 1
-#define FREE_INDEX 2
+#define FREE_INDEX 4
 #define DESCRIPTOR_OFFSET 3
 
 typedef enum {USED, FREE}block_status_t;
 
 // block size calculated at run time
-static int BLOCK_SIZE;
-static int NUM_BLOCKS;
+int BLOCK_SIZE;
+int NUM_BLOCKS;
 
 //entry in the root directory
 typedef struct {
