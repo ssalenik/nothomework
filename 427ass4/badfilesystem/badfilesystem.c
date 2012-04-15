@@ -12,11 +12,15 @@
 
 #include"badfilesystem.h"
 
-int* free_blocks;
-
 int initialized = 0; //flag to test whether or not mem stucts have been initialized yet
 
-/* private functions */
+/***********************************************/
+/*           private functions                 */
+/***********************************************/
+
+/**
+ * initializes the needed data structures in memory
+ */
 int init() {
 	//calculate number of blocks
 	NUM_BLOCKS = MAX_FILES + 3; //free blocks + root dir + fat + free blocks
@@ -25,18 +29,8 @@ int init() {
 	free_list = list_create(destroy_free_list);
 
 	//create other stuff
-	directory = (directory_entry_t*) malloc(
-			MAX_FILES * sizeof(directory_entry_t));
-	fat = (fat_entry_t*) malloc(NUM_BLOCKS * sizeof(fat_entry_t));
-	file_descriptor = (file_descriptor_t*) malloc(
-			MAX_FILES * sizeof(file_descriptor_t));
-	free_blocks = (int*)malloc(NUM_BLOCKS*sizeof(int));
 
-	//set fat for first 3
-	fat[1].block_index = 1;
-	fat[2].block_index = 2;
-
-	//determine block size
+	//determine block size based on the largest needed data structure
 	BLOCK_SIZE = MAX_FILES * sizeof(directory_entry_t);
 	if (MAX_FILES * sizeof(file_descriptor_t) > BLOCK_SIZE)
 		BLOCK_SIZE = MAX_FILES * sizeof(file_descriptor_t);
@@ -45,24 +39,42 @@ int init() {
 	if (NUM_BLOCKS * sizeof(int) > BLOCK_SIZE)
 		BLOCK_SIZE = NUM_BLOCKS * sizeof(int); // should never happen
 
-	BLOCK_SIZE++;
+	/* init these arrays to be the BLOCK SIZE in order memcpy from the FS properly */
+	directory = (directory_entry_t*) malloc(BLOCK_SIZE);
+	fat = (fat_entry_t*) malloc(BLOCK_SIZE);
+	file_descriptor = (file_descriptor_t*) malloc(
+			MAX_FILES * sizeof(file_descriptor_t));
 
-	printf("block size: %d\nnumber of blocks: %d\n", BLOCK_SIZE, NUM_BLOCKS);
+	//set fat for first 3
+	fat[1].block_index = 1;
+	fat[2].block_index = 2;
+
+	printf("block size: %d\nnumber of blocks: %d\n\n", BLOCK_SIZE, NUM_BLOCKS);
 
 	return 0;
 }
+
+/**
+ * writes the file directory to the proper FS block
+ */
 int write_directory() {
 	if (write_blocks(DIRECTORY_INDEX, 1, directory))
 		return 0;
 	else
 		return -1;
 }
+/**
+ * reads the file directory from the proper FS block
+ */
 int read_directory() {
 	if (read_blocks(DIRECTORY_INDEX, 1, directory))
 		return 0;
 	else
 		return -1;
 }
+/**
+ * writes the FAT to the proper FS block
+ */
 int write_fat() {
 	if (write_blocks(FAT_INDEX, 1, fat))
 		return 0;
@@ -70,6 +82,9 @@ int write_fat() {
 		return -1;
 	return 0;
 }
+/**
+ * reads the FAT from the proper FS block
+ */
 int read_fat() {
 	if (read_blocks(FAT_INDEX, 1, fat))
 		return 0;
@@ -77,40 +92,55 @@ int read_fat() {
 		return -1;
 	return 0;
 }
+/**
+ * writes the free block list to the proper FS block
+ */
 int write_free() {
 	int i = 0;
 	int block;
+	block_status_t* temp = (block_status_t*) malloc(BLOCK_SIZE);
 
 	// init all to USED
 	for (i = 0; i < NUM_BLOCKS; i++) {
-		free_blocks[i] = USED;
+		temp[i] = USED;
 	}
 
+	// check which are free and mark them accordingly
 	for (i = 0; i < list_length(free_list); i++) {
 		block = list_item_int(free_list, i);
-		free_blocks[block] = FREE;
+		temp[block] = FREE;
 	}
 
-	if (write_blocks(FREE_INDEX, 1, free_blocks)) {
+	if (write_blocks(FREE_INDEX, 1, temp)) {
+		free(temp);
 		return 0;
 	} else {
+		free(temp);
 		return -1;
 	}
-
 }
+
+/**
+ * reads the free block list from the proper FS block
+ */
 int read_free() {
 	int i = 0;
 
+	block_status_t* temp = (block_status_t*) malloc(BLOCK_SIZE);
+
 	list_empty(free_list);
 
-	if (read_blocks(FREE_INDEX, 1, free_blocks)) {
+	//using linked-list, so only append the free blocks
+	if (read_blocks(FREE_INDEX, 1, temp)) {
 		for (i = 0; i < NUM_BLOCKS; i++) {
-			if (free_blocks[i] == FREE) {
+			if (temp[i] == FREE) {
 				list_append_int(free_list, i);
 			}
 		}
+		free(temp);
 		return 0;
 	} else {
+		free(temp);
 		return -1;
 	}
 }
@@ -140,6 +170,8 @@ int create_file(char *name) {
 
 		//create file descriptor entry
 		file_descriptor[file_index].fat_index = directory[file_index].fat_index;
+		file_descriptor[file_index].read_index = 0;
+		file_descriptor[file_index].write_index = 0;
 
 		write_directory();
 		write_fat();
@@ -149,24 +181,26 @@ int create_file(char *name) {
 	}
 }
 
-/***************************************/
-/*         public functions            */
-/***************************************/
+/***********************************************/
+/*             public functions                */
+/***********************************************/
 void mksfs(int fresh) {
 	int i = 0;
 	//first check if data structs have been initialized yet or not
 	if (initialized) {
+		//free them first
 		free(directory);
 		free(fat);
 		free(file_descriptor);
-		free(free_blocks);
 		list_destroy(&free_list);
+		free(free_list);
 	} else {
 		initialized = 1;
 	}
 	init(); //init data structures
 
 	if (fresh) {
+		printf("creating new FS: %s\n\n", NAME);
 		// new FS
 		if (init_fresh_disk(NAME, BLOCK_SIZE, NUM_BLOCKS) == 0) {
 			//make sure everything is empty
@@ -191,17 +225,12 @@ void mksfs(int fresh) {
 			write_directory();
 			write_fat();
 			write_free();
-
-
-			read_blocks(5, 1, fat);
-			read_blocks(5, 1, fat);
-			read_blocks(5, 1, fat);
-
 		} else {
+			errno = EIO;
 			perror("error initializing new file system");
 		}
 	} else {
-
+		printf("recovering existing FS: %s\n\n", NAME);
 		// existing FS
 		if (init_disk(NAME, BLOCK_SIZE, NUM_BLOCKS) == 0) {
 			//get status FS blocks
@@ -216,11 +245,18 @@ void mksfs(int fresh) {
 				}
 			}
 		} else {
+			errno = EIO;
 			perror("error initializing existing file system");
 		}
 	}
 
 }
+
+/**
+ * lists all of the files currently in the directory
+ *
+ * prints out the file ID, file name, and file size (and file modified date, if implemented)
+ */
 void sfs_ls() {
 	int i = 0;
 
@@ -269,6 +305,16 @@ void sfs_fclose(int fileID) {
 	} else
 		file_descriptor[fileID].fat_index = 0;
 }
+
+/**
+ * writes (the given length) of the given buffer to the given file
+ * starting from the current location of the write pointer
+ *
+ * returns with error message if file is not open
+ *
+ * will write to blocks until the FS runs out of space
+ * ie: it does not check if there is enough space before hand
+ */
 void sfs_fwrite(int fileID, char *buf, int length) {
 	char *buf_new;
 	int block_current = 0;
@@ -276,10 +322,10 @@ void sfs_fwrite(int fileID, char *buf, int length) {
 	int bytes_write = 0;
 	int bytes_written = 0; // number of bytes written; should = length at end of operation
 
-//check that file exists and is open
+	//check that file exists and is open
 	if (file_descriptor[fileID].fat_index == 0) {
 		errno = EINVAL;
-		perror("specified files is not open for writing!");
+		perror("specified file is not open for writing!");
 	} else {
 		//figure out which block to start writing in
 		//as well as the offset
@@ -339,17 +385,25 @@ void sfs_fwrite(int fileID, char *buf, int length) {
 					// else continue writing in next block
 					block_current = fat[block_current].next_fat_entry;
 				}
-
 			}
-
 		}
-
 		//write changes to the status blocks
 		write_directory();
 		write_fat();
 		write_free();
 	}
 }
+
+/**
+ * reads from the given file the given length into the given buffer
+ * starting from the current read pointer
+ *
+ * returns with error message if the file is not open
+ *
+ * will read into the buffer until the end of the file
+ * ie: it does not check if the desired length goes out of the file bounds
+ * ahead of time
+ */
 void sfs_fread(int fileID, char *buf, int length) {
 	char *buf_new;
 	int block_current = 0;
@@ -357,17 +411,11 @@ void sfs_fread(int fileID, char *buf, int length) {
 	int bytes_to_read;
 	int bytes_read = 0;
 
-//check that file exists and is open
+	//check that file exists and is open
 	if (file_descriptor[fileID].fat_index == 0) {
 		errno = EINVAL;
 		perror("specified files is not open for reading!");
 	} else {
-
-		//check if reading beyond files size
-		if (length
-				> directory[fileID].file_size
-						- file_descriptor[fileID].read_index)
-			printf("warning: reading beyond end of file (based on file size)");
 
 		//figure out which block to start reading in
 		//as well as the offset
@@ -412,14 +460,22 @@ void sfs_fread(int fileID, char *buf, int length) {
 		}
 	}
 }
+
+/**
+ * moves the write and read pointers of the give file to the given location
+ * (from the beginning of the file)
+ *
+ * returns with error message if the files is not open, or if the give location
+ * is outside fo the file boundaries
+ */
 void sfs_fseek(int fileID, int loc) {
-//check that file exists and is open
+	//check that file exists and is open
 	if (file_descriptor[fileID].fat_index == 0) {
 		errno = EINVAL;
 		perror("specified files is not open");
 	}
-//check that loc is not out of bounds of file
-	else if (directory[fileID].file_size > loc) {
+	//check that loc is not out of bounds of file
+	else if (directory[fileID].file_size < loc) {
 		errno = EFAULT;
 		perror("desired location greater than file size");
 	} else {
@@ -428,11 +484,19 @@ void sfs_fseek(int fileID, int loc) {
 	}
 
 }
+
+/**
+ * deletes the given file from the directory
+ *
+ * returns 0 on success; -1 on failure, if the given file is not found
+ *
+ * note: it does not reset the actual contents of the FS, just marks the appropriate entries as empty
+ */
 int sfs_remove(char *file) {
 	int file_index = 0;
 	int block_current = 0;
 
-// look for file in directory
+	// look for file in directory
 	while (strcmp(directory[file_index].filename, file)
 			&& ++file_index < MAX_FILES)
 		;
