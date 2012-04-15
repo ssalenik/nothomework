@@ -268,7 +268,84 @@ void sfs_fclose(int fileID) {
 		file_descriptor[fileID].fat_index = 0;
 }
 void sfs_fwrite(int fileID, char *buf, int length) {
+	char *buf_new;
+	int block_current = 0;
+	int blocks = 1; // the number of blocks the files takes up
+	int offset_current = 0;
+	int i;
+	int size_new;
+	int bytes_write = 0;
+	int bytes_written = 0; // number of bytes written; should = length at end of operation
+	int status = 0; // used to store return value of operations
 
+	//check that file exists and is open
+	if (file_descriptor[fileID].fat_index == 0) {
+		errno = EINVAL;
+		perror("specified files is not open for writing!");
+	} else {
+		//calculate new size of file
+		size_new = directory[fileID].file_size;
+		if (file_descriptor[fileID].write_index + length > size_new)
+			size_new = file_descriptor[fileID].write_index + length;
+
+		//figure out which block to start writing in
+		//as well as the offset
+		block_current = file_descriptor[fileID].fat_index;
+		offset_current = file_descriptor[fileID].write_index;
+		while (offset_current > BLOCK_SIZE) {
+			block_current = fat[block_current].next_fat_entry;
+			blocks++;
+			offset_current -= BLOCK_SIZE;
+		}
+
+		//now start writing!
+		while (bytes_written != length) {
+
+			// first read the current block
+			buf_new = (char*) malloc(BLOCK_SIZE * sizeof(char));
+			read_blocks(block_current, 1, buf_new);
+			//check how much data to write
+			bytes_write = (length - bytes_written > BLOCK_SIZE - offset_current)? BLOCK_SIZE - offset_current : length - bytes_written;
+			// overwrite with the new data
+			memcpy(buf_new + offset_current, buf + bytes_written,
+					bytes_write);
+			// write to the block
+			write_blocks(block_current, 1, buf_new);
+
+			bytes_written += bytes_write;
+			file_descriptor[fileID].write_index += bytes_written;
+			//update files size if increased
+			if(file_descriptor[fileID].write_index > directory[fileID].file_size)
+				directory[fileID].file_size = file_descriptor[fileID].write_index;
+
+			//offset for next block is now 0
+			offset_current = 0;
+
+
+			//check if we need to get another block
+			if(bytes_written != length){
+				//check if we need to allocate another block
+				if(fat[block_current].next_fat_entry == 0){
+					//check if there are free blocks left
+					if( list_length(free_list) != 0){
+						fat[block_current].next_fat_entry = list_shift_int(free_list);
+						block_current = fat[block_current].next_fat_entry;
+					} else {
+						// no more free blocks!
+						directory[fileID].file_size = file_descriptor[fileID].write_index;
+						errno = ENOMEM;
+						perror("cannot finish writing buffer");
+					}
+				} else {
+					// else continue writing in next block
+					block_current = fat[block_current].next_fat_entry;
+				}
+
+			}
+
+		}
+
+	}
 }
 void sfs_fread(int fileID, char *buf, int length) {
 
