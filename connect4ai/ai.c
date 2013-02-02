@@ -1,4 +1,4 @@
-#import "ai.h"
+#include "ai.h"
 
 /* checks if end-game has been reached
  * returns:

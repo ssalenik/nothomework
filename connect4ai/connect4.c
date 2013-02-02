@@ -1,4 +1,4 @@
-#import "connect4.h"
+#include "connect4.h"
 
 #define DEFAULT_START "default.txt"
 
