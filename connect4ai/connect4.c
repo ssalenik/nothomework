@@ -1,17 +1,9 @@
 #import "connect4.h"
 
-/* game state
- * 0 = empty
- * 1 = o = white
- * 2 = x = black
- */
-/*int game_state[7][7] = {{ 1, 2, 0, 0, 0, 0, 2}, \
-						{ 2, 0, 0, 0, 0, 0, 1}, \
-						{ 1, 0, 0, 0, 0, 0, 2}, \
-						{ 2, 0, 0, 0, 0, 0, 1}, \
-						{ 1, 0, 0, 0, 0, 0, 2}, \
-						{ 2, 0, 0, 0, 0, 0, 1}, \
-						{ 1, 0, 0, 0, 0, 0, 2}}; */
+/* game state */
+char o = 'o';	//white
+char x = 'x';	//black
+char e = '.';	//empty
 
 char game_state[8][8] = {	{' ', '1', '2', '3', '4', '5', '6', '7'}, \
 							{'1', 'o', '.', '.', '.', '.', '.', 'x'}, \
@@ -21,11 +13,6 @@ char game_state[8][8] = {	{' ', '1', '2', '3', '4', '5', '6', '7'}, \
 							{'5', 'o', '.', '.', '.', '.', '.', 'x'}, \
 							{'6', 'x', '.', '.', '.', '.', '.', 'o'}, \
 							{'7', 'o', '.', '.', '.', '.', '.', 'x'}};
-
-/* output */
-char w = 'o';	//white
-char b = 'x';	//black
-char e = '.';	//empty
 
 /*
  * prints the game state
@@ -42,12 +29,45 @@ int showstate() {
 	return 0;
 }
 
-int playermove() {
-	
+/* prints the help */
+int printhelp() {
+	printf("usage: connect 4 [<args>] [<input file>]\n\n"
+			"args:\n"
+			"\tw\tuser plays as white\n"
+			"\tb\tuser plays as black\n\n"
+			"in-game commands:\n"
+			"\tmove:\t<x,y,direction>; eg: 12W - will move the piece at <1,2> to the right\n"
+			"\thelp:\ttype \'help\'\n"
+			"\texit:\ttype \'exit\'\n\n"
+			"input file:\n"
+			"\tThe input file should contain comma sperated starting locations for each piece.\n"
+			"\tThe first line contains the positions for all of the white pieces, and then\n"
+			"\tthe second line contains the position for all the black pieces.\n"
+			"\texample for indicating the default staring position:\n"
+			"\t\t11,13,15,17,72,74,76\n"
+			"\t\t12,14,16,71,73,75,77\n");
+
+	return 0;
+}
+
+/* gets input from user */
+int getinput() {
+
+	return 0;
+}
+/* validates entered move */
+int validatemove() {
+	return 0;
+}
+/* changes game state to reflect move*/
+int executemove() {
+
+	return 0;
 }
 
 int main(int argc, char** argv) {
 	showstate();
+	printhelp();
 
 	return 0;
 }

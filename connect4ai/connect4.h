@@ -7,3 +7,7 @@
 #endif /* CONNECT4_H_ */
 
 int showstate();
+int printhelp();
+int getinput();
+int validatemove();
+int executemove();
