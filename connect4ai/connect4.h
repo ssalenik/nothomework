@@ -21,10 +21,8 @@ int bitboard_lookup[56][2] = { \
 #endif /* CONNECT4_H_ */
 
 int showstate();
-int showstate_old();
 int printhelp();
 int parsefile(char *ifile);
-int parsefile_old(char *ifile);
 int getinput();
 int validatemove();
 int executemove();
