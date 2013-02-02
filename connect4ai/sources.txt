@@ -1,0 +1,11 @@
+These are the resources visited/read while working on this assignment.
+This only includes resources related to developing any algorithms/strategies related to the game of connect 4.
+Resources related to developing in C, debuggin, generic data-structures, and other programing dificulties are not listed.
+
+game state:
+http://en.wikipedia.org/wiki/Bitboard
+
+testing for end-game:
+http://stackoverflow.com/questions/7033165/algorithm-to-check-a-connect-four-field
+
+
