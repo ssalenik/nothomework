@@ -1,7 +1,10 @@
 #import "connect4.h"
 
 #define DEFAULT_START "default.txt"
+
 /* game state */
+enum player_turn {white, black} turn;
+
 char w = 'o';	//white
 char b = 'x';	//black
 char e = '.';	//empty
@@ -14,6 +17,9 @@ char game_state[8][8] = {	{' ', '1', '2', '3', '4', '5', '6', '7'}, \
 							{'5', '.', '.', '.', '.', '.', '.', '.'}, \
 							{'6', '.', '.', '.', '.', '.', '.', '.'}, \
 							{'7', '.', '.', '.', '.', '.', '.', '.'}};
+
+uint64_t bitboard_white = 0;
+uint64_t bitboard_black = 1;
 
 /*
  * prints the game state
@@ -217,6 +223,19 @@ int main(int argc, char** argv) {
     	exit(1);
 
 	showstate();
+
+	turn = white;
+
+	int done = 0;
+	while(!done) {
+		if(turn == white) {
+			printf("white turn:\n");
+
+		} else {
+			printf("black turn:\n");
+		}
+	}
+
 
 	return 0;
 }

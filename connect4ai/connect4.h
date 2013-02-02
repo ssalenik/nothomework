@@ -4,6 +4,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <inttypes.h>
+
+#include "ai.h"
 
 #endif /* CONNECT4_H_ */
 
