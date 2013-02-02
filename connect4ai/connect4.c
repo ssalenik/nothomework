@@ -282,19 +282,42 @@ int main(int argc, char** argv) {
     if(parsefile(ifile) != 0)
     	exit(1);
 
+    printf("starting position:\n");
 	showstate();
 
 	turn = white;
 
-	int done = 1;
-	while(!done) {
-		if(turn == white) {
-			printf("white turn:\n");
+	int done = 0;
+	done = check_endgame(bitboard_white);
 
-		} else {
-			printf("black turn:\n");
-		}
+	printf("\n");
+
+	switch(done) {
+	case 0:
+		printf("no winner\n");
+		break;
+	case 1:
+		printf("white wins horizontal\n");
+		break;
+	case 2:
+		printf("white wins vertical\n");
+		break;
+	case 3:
+		printf("white wins diagonal /\n");
+		break;
+	case 4:
+		printf("white wins diagonal \\\n");
+		break;
 	}
+	printf("\n");
+	// while(!done) {
+	// 	if(turn == white) {
+	// 		printf("white turn:\n");
+
+	// 	} else {
+	// 		printf("black turn:\n");
+	// 	}
+	// }
 
 
 	return 0;
