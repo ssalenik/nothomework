@@ -24,6 +24,12 @@ typedef struct node {
 
 #endif /* AI_H_ */
 
+uint64_t generate_key(uint64_t w, uint64_t b);
+int has_visited_state(uint64_t bitboard_white, uint64_t bitboard_black);
+int north(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent);
+int south(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent);
+int east(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent);
+int west(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent);
 int check_endgame(uint64_t board);
 int ai_turn(turn_t turn,
 			uint64_t bitboard_white,
@@ -38,4 +44,4 @@ int minimax(turn_t turn,
 			uint64_t bitboard_black,
 			uint64_t white_bits[],
 			uint64_t black_bits[],
-			int curr_depth);
+			int curr_ply);

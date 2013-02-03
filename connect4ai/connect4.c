@@ -312,8 +312,14 @@ int main(int argc, char** argv) {
 	printf("\n");
 
     int states_visited;
-    ai_turn(turn, bitboard_white, bitboard_black, white_bits, black_bits, 5, &states_visited);
+    //ai_turn(turn, bitboard_white, bitboard_black, white_bits, black_bits, 5, &states_visited);
 
+    //north(&white_bits[3], &bitboard_white, bitboard_black);
+    //south(&white_bits[3], &bitboard_white, bitboard_black);
+    int result = east(&white_bits[5], &bitboard_white, bitboard_black);
+    //west(&white_bits[3], &bitboard_white, bitboard_black);
+    printf("result: %i\n", result);
+    showstate();
     return 0;
 
 	// while(!done) {

@@ -2,6 +2,15 @@
 
 #define DEBUG 1
 
+// borders
+#define BORDER_W 18085043209519168
+#define BORDER_E 282578800148737
+#define BORDER_N 127
+#define BORDER_S 35747322042253312 
+
+KHASH_MAP_INIT_INT64(64, list_t*);
+khash_t(64) *h;
+
 /* checks if end-game has been reached
  * returns:
  * 0 - if no win
@@ -12,10 +21,6 @@
  *
  * algo adapted from 	
  */
-
-KHASH_MAP_INIT_INT64(64, list_t*);
-khash_t(64) *h;
-
 int check_endgame(uint64_t board) {
 	// horizontal check
 	uint64_t copy = board & (board >> 1);
@@ -49,6 +54,7 @@ int ai_turn(turn_t turn,
 			int d_cutoff,
 			int* states_visited) {
 	h = kh_init(64);  // allocate a hash table
+	has_visited_state(bitboard_white, bitboard_black); // save the initial state
 
 	minimax(turn, bitboard_white, bitboard_black, white_bits, black_bits, 0);
 
@@ -65,7 +71,7 @@ int has_visited_state(uint64_t bitboard_white, uint64_t bitboard_black) {
 	int ret;
 	khiter_t k;
 
-	uint64_t key = 25; //generate_key(bitboard_white, bitboard_black);
+	uint64_t key = generate_key(bitboard_white, bitboard_black);
 
 	k = kh_put(64, h, key, &ret);
 
@@ -133,35 +139,118 @@ int has_visited_state(uint64_t bitboard_white, uint64_t bitboard_black) {
 
 }
 
+/* performs recursive minimax algo
+ * returns as soon as a winning move is found, ie:
+ *		the algo won't continue if a guaranteed ai move is found
+ *
+ * @return: 1 if player who starts (turn) wins
+ *			0 if its a draw/no winning state is found before cutoff is reached
+ *			-1 if player who starts (turn) loses
+ */
 int minimax(turn_t turn,
 			uint64_t bitboard_white,
 			uint64_t bitboard_black,
 			uint64_t white_bits[],
 			uint64_t black_bits[],
-			int curr_depth) {
-
-	// test
-	int result;
-
-	printf("storing:\nw: %llu\nw: %llu\n", bitboard_white, bitboard_black);
-	result = has_visited_state(bitboard_white, bitboard_black);
-	printf("result: %i\n", result);
-	printf("storing:\nw: %llu\nw: %llu\n", bitboard_white, bitboard_black);
-	result = has_visited_state(bitboard_white, bitboard_black);
-	printf("result: %i\n", result);
-	printf("storing:\nw: %llu\nw: %llu\n", bitboard_white, bitboard_black + 1);
-	result = has_visited_state(bitboard_white, bitboard_black + 1);
-	printf("result: %i\n", result);
-	printf("storing:\nw: %llu\nw: %llu\n", bitboard_white, bitboard_black + 1);
-	result = has_visited_state(bitboard_white, bitboard_black + 1);
-	printf("result: %i\n", result);
+			int curr_ply) {
+	int piece_idx, dir;
+	
+	// first check if this move resulted in an end-game
 	if(turn == white) {
-
-	} else {
-
+		// if current turn is white, previous move was black
+		if(check_endgame(bitboard_black))
+			return -1;
 	}
 
+	// white is MAX, black is MIN
+	for(piece_idx = 0; piece_idx < 7; piece_idx++) {
+		// try possible move for each piece
+		for(dir = 0; dir < 4; dir++) {
+			// try the 4 possible directions
 
 
+		}
+	}
+
+	return 0;
+}
+
+/* attempts to move the given piece north one spot
+ * returns 0 if successful, -1 if move not possible
+ * updates piece and the corresponding bitboard if possible
+ */
+int north(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent) {
+	uint64_t piece_tmp = *piece;
+	// first check if its trying to move off the board
+	if (piece_tmp & BORDER_N)
+		return 1;
+	// move up
+	piece_tmp = piece_tmp >> 8;
+	// now check if it conflicts with its own or the oponent's pieces
+	if (piece_tmp & *bb_own || piece_tmp & bb_oponent)
+		return 1;
+	// move is successful, alter the piece and its board
+	*bb_own = *bb_own - *piece;
+	*piece = piece_tmp;
+	return 0;
+}
+
+/* attempts to move the given piece south one spot
+ * returns 0 if successful, -1 if move not possible
+ * updates piece and the corresponding bitboard if possible
+ */
+int south(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent) {
+	uint64_t piece_tmp = *piece;
+	// first check if its trying to move off the board
+	if (piece_tmp & BORDER_S)
+		return 1;
+	// move down
+	piece_tmp = piece_tmp << 8;
+	// now check if it conflicts with its own or the oponent's pieces
+	if (piece_tmp & *bb_own || piece_tmp & bb_oponent)
+		return 1;
+	// move is successful, alter the piece and its board
+	*bb_own = *bb_own - *piece;
+	*piece = piece_tmp;
+	return 0;
+}
+
+/* attempts to move the given piece west one spot
+ * returns 0 if successful, -1 if move not possible
+ * updates piece and the corresponding bitboard if possible
+ */
+int west(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent) {
+	uint64_t piece_tmp = *piece;
+	// first check if its trying to move off the board
+	if (piece_tmp & BORDER_E)
+		return 1;
+	// move left
+	piece_tmp = piece_tmp >> 1;
+	// now check if it conflicts with its own or the oponent's pieces
+	if (piece_tmp & *bb_own || piece_tmp & bb_oponent)
+		return 1;
+	// move is successful, alter the piece and its board
+	*bb_own = *bb_own - *piece;
+	*piece = piece_tmp;
+	return 0;
+}
+
+/* attempts to move the given piece east one spot
+ * returns 0 if successful, 1 if move not possible
+ * updates piece and the corresponding bitboard if possible
+ */
+int east(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent) {
+	uint64_t piece_tmp = *piece;
+	// first check if its trying to move off the board
+	if (piece_tmp & BORDER_W)
+		return 1;
+	// move right
+	piece_tmp = piece_tmp << 1;
+	// now check if it conflicts with its own or the oponent's pieces
+	if (piece_tmp & *bb_own || piece_tmp & bb_oponent)
+		return 1;
+	// move is successful, alter the piece and its board
+	*bb_own = *bb_own - *piece;
+	*piece = piece_tmp;
 	return 0;
 }
