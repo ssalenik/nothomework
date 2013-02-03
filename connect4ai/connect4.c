@@ -3,8 +3,6 @@
 #define DEFAULT_START "default.txt"
 
 /* game state */
-enum player_turn {white, black} turn;
-
 char w = 'o';	//white
 char b = 'x';	//black
 char e = '.';	//empty
@@ -38,6 +36,8 @@ uint64_t bitboard_black = 0;	// the entire black board
 // uint64_t black_bits[7] = {1,1,1,1,1,1,1};	// position of individual black pieces
 uint64_t white_bits[7] = {1,128,16384,2097152,268435456,34359738368,4398046511104};	// position of individual white pieces
 uint64_t black_bits[7] = {64,8192,1048576,134217728,17179869184,2199023255552,281474976710656};	// position of individual black pieces
+
+KHASH_MAP_INIT_INT64(64, uint64_t*);
 
 /*
  * prints the game state from the bitboard representation
@@ -285,7 +285,7 @@ int main(int argc, char** argv) {
     printf("starting position:\n");
 	showstate();
 
-	turn = white;
+	turn_t turn = white;
 
 	int done = 0;
 	done = check_endgame(bitboard_white);
@@ -310,6 +310,13 @@ int main(int argc, char** argv) {
 		break;
 	}
 	printf("\n");
+
+    khash_t(64) *hashmap = kh_init(64);  // allocate a hash table
+    int max_depth, states_visited;
+    minimax(turn, bitboard_white, bitboard_black, white_bits, black_bits, 5, &max_depth, &states_visited, hashmap);
+
+    return 0;
+
 	// while(!done) {
 	// 	if(turn == white) {
 	// 		printf("white turn:\n");

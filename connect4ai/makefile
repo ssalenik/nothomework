@@ -1,9 +1,9 @@
 CC=gcc
 
-all: ./connect4.c ./connect4.h ./ai.c ./ai.h
+all: ./connect4.c ./connect4.h ./ai.c ./ai.h ./khash.h
 	$(CC) -Wall connect4.c ai.c -o connect4
 
-optimize: ./connect4.c ./connect4.h ./ai.c ./ai.h
+optimize: ./connect4.c ./connect4.h ./ai.c ./ai.h ./khash.h
 	$(CC) -O3 -Wall connect4.c ai.c -o connect4
 
 clean:
