@@ -1,5 +1,7 @@
 #include "ai.h"
 
+#define DEBUG 1
+
 /* checks if end-game has been reached
  * returns:
  * 0 - if no win
@@ -63,7 +65,7 @@ int has_visited_state(uint64_t bitboard_white, uint64_t bitboard_black) {
 	int ret;
 	khiter_t k;
 
-	uint64_t key = generate_key(bitboard_white, bitboard_black);
+	uint64_t key = 25; //generate_key(bitboard_white, bitboard_black);
 
 	k = kh_put(64, h, key, &ret);
 
@@ -71,29 +73,40 @@ int has_visited_state(uint64_t bitboard_white, uint64_t bitboard_black) {
 	if(ret) {
 		// new key, store state
 		// create linked list node to do so
+		#if DEBUG == 1
 		printf("new key\n");
+		#endif
+
 		list_t *new_list;
 		new_list = malloc(sizeof(list_t));
 		new_list->b_white = bitboard_white;
 		new_list->b_black = bitboard_black;
 		new_list->next = NULL;
 		kh_value(h, k) = new_list;
-
-		printf("stored w: %llu\nstored b: %llu\n", new_list->b_white, new_list->b_black);
 		return 1;
+
 	} else {
 		// key already exists, check the state
-		printf("old key\n");
+		#if DEBUG == 1
+		printf("old key, listing visited states:\n");
+		#endif
+
 		list_t *old_list;
 		list_t *next_state;
 		old_list = kh_value(h, k);
 		next_state = old_list;
 
 		while(next_state != NULL) {
-			printf("w: %llu\nb: %llu\n", old_list->b_white, old_list->b_black);
+			#if DEBUG == 1
+			printf("w: %llu\tb: %llu\n", old_list->b_white, old_list->b_black);
+			#endif
+
 			if( old_list->b_white == bitboard_white && old_list->b_black == bitboard_black) {
 				// same state
-				printf("same state\n");
+				#if DEBUG == 1
+				printf("found same state\n");
+				#endif
+
 				return 0;
 			} else {
 				next_state = old_list->next;
@@ -104,6 +117,11 @@ int has_visited_state(uint64_t bitboard_white, uint64_t bitboard_black) {
 		}
 		// state was not found, add it to list
 		// create linked list node to do so
+
+		#if DEBUG == 1
+		printf("did not find same state, adding new state to list\n");
+		#endif
+
 		list_t *new_state;
 		new_state = malloc(sizeof(list_t));
 		new_state->b_white = bitboard_white;
@@ -113,8 +131,6 @@ int has_visited_state(uint64_t bitboard_white, uint64_t bitboard_black) {
 		return 1;
 	}
 
-
-	return 0;
 }
 
 int minimax(turn_t turn,
@@ -136,7 +152,9 @@ int minimax(turn_t turn,
 	printf("storing:\nw: %llu\nw: %llu\n", bitboard_white, bitboard_black + 1);
 	result = has_visited_state(bitboard_white, bitboard_black + 1);
 	printf("result: %i\n", result);
-	
+	printf("storing:\nw: %llu\nw: %llu\n", bitboard_white, bitboard_black + 1);
+	result = has_visited_state(bitboard_white, bitboard_black + 1);
+	printf("result: %i\n", result);
 	if(turn == white) {
 
 	} else {
