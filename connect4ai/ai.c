@@ -6,12 +6,15 @@
 #define BORDER_W 18085043209519168
 #define BORDER_E 282578800148737
 #define BORDER_N 127
-#define BORDER_S 35747322042253312 
+#define BORDER_S 35747322042253312
 
 KHASH_MAP_INIT_INT64(64, list_t*);
 khash_t(64) *h;
 
-int ply_cutoff; // 2 * depth_cutoff
+int alpha_min;
+int beta_max;
+
+int ply_cutoff; 
 uint64_t states_visited = 0;
 int collisions = 0;
 
@@ -77,13 +80,22 @@ int ai_turn(uint64_t bb_1,
 			int d_cutoff,
 			int* states) {
 	h = kh_init(64);  // allocate a hash table
-	ply_cutoff = 2*d_cutoff;
+	ply_cutoff = d_cutoff;
 	has_visited_state(bb_1, bb_2); // save the initial state
 
 	// get initial time
     gettimeofday(&tvBegin, NULL);
 
-	int util = minimax(1, bb_1, bb_2, bits_1, bits_2, 0);
+    int util;
+    int alpha;
+	util = minimax(1, bb_1, bb_2, bits_1, bits_2, 0);
+
+	//alphabeta
+	alpha_min = -1;
+	beta_max = 1;
+	//alpha = alphabeta(1, bb_1, bb_2, bits_1, bits_2, 0);
+
+	//util = alpha;
 
 	printf("util: %i\nstates: %llu\ncollisions: %i\npiece to move: %i\ndir to move: %i\n", util, states_visited, collisions, piece_to_move, dir_to_move);
 
@@ -453,6 +465,216 @@ int minimax(int turn,
 		// 	showstate(bits_1, bits_2);
 		// }
 		return utility;
+	}
+}
+
+/* performs recursive alphabeta algo
+ * assumes player 1 is max player
+ *
+ * @return: 1 if player who starts (turn) wins
+ *			0 if its a draw/no winning state is found before cutoff is reached
+ *			-1 if player who starts (turn) loses
+ */
+int alphabeta(	int turn,
+				//int alpha,
+				//int beta,
+				uint64_t bb_1,
+				uint64_t bb_2,
+				uint64_t bits_1[],
+				uint64_t bits_2[],
+				int curr_ply) {
+	if(turn == 1) {
+		// previous turn was of player 2
+		// check if it was a winning move
+		if(check_endgame(bb_2)) {
+			// player 2 is min
+			//printf("lost\n");
+			return -1;
+		}
+	} else {
+		// previous turn was of player 1
+		int end = check_endgame(bb_1);
+		if(end) {
+			//player 1 is max
+			//printf("won: %i\n", end);
+			//printf("bb1: %llu\n", bb_1);
+			//showstate(bits_1, bits_2);
+			return 1;
+		}
+	}
+	// check if we have reached the depth cutoff
+	
+	if (curr_ply == ply_cutoff) {
+		// depth cutoff, and no winner
+		return 0;
+	}
+	curr_ply++;
+
+	check_time();
+
+	int utility; // the result
+	int utility_piece[7] = {0, 0, 0, 0, 0, 0, 0}; // utility of each piece
+	int utility_dir[7]; // direction of the utility picked
+	int piece_idx;
+	int dir_idx;
+	int dir_order[4] = {E, W, N, S};
+	int dir;
+	int piece_order[7] = {0, 1, 2, 3, 4, 5, 6};
+	int piece;
+	if(turn == 1){
+		// player 1 moves
+		// player 1 is MAX, player 1 wants the max possible utility
+
+
+		// try the 7 possible pieces
+		for(piece_idx = 0; piece_idx < 7; piece_idx++) {
+			uint64_t bits_dir[4];
+			uint64_t bb_dir[4];			
+			int utility_tmp[4] = {-2, -2, -2, -2};
+
+			piece = piece_order[piece_idx];
+
+			//printf("piece: %i\n", piece);
+
+			// try the 4 possible directions
+			for (dir_idx = 0; dir_idx < 4; dir_idx++) {
+				dir = dir_order[dir_idx];
+				bits_dir[dir] = bits_1[piece];
+				bb_dir[dir] = bb_1;
+
+				//printf("dir: %i\n", dir);
+
+
+				if (trydir(dir, &(bits_dir[dir]), &(bb_dir[dir]), bb_2) == 0) {
+					// possible to move this direction
+					utility_tmp[dir] = 0; // set to 0, as it is a possible state
+					// check if state has been visited
+					if(has_visited_state(bb_dir[dir], bb_2) == 1) {
+						// new state!
+						// need a copy of the modified board for each try
+						uint64_t bits_tmp[7];
+						memcpy(bits_tmp, bits_1, 7*sizeof(uint64_t));
+						bits_tmp[piece] = bits_dir[dir];
+						// perform minimax on this move
+						utility_tmp[dir] = alphabeta(2, bb_dir[dir], bb_2, bits_tmp, bits_2, curr_ply);
+					}
+				}
+			}
+
+			// now check in  order which one to take
+			utility_piece[piece] = utility_tmp[dir_order[0]];
+			utility_dir[piece] = dir_order[0];
+			for(dir_idx = 1; dir_idx < 4; dir_idx++) {
+				dir = dir_order[dir_idx];
+				if(utility_piece[piece] < utility_tmp[dir]) {
+					utility_piece[piece] = utility_tmp[dir];
+					utility_dir[piece] = dir;
+				}
+			}
+		}
+
+		// now check in order which one to take
+		utility = utility_piece[piece_order[0]];
+		piece = piece_order[0];
+		for(piece_idx = 1; piece_idx < 7; piece_idx++) {
+			piece = piece_order[piece_idx];
+			if(utility < utility_piece[piece]) {
+				utility = utility_piece[piece];
+				piece_to_move = piece;
+			}
+		}
+
+		dir_to_move = utility_dir[piece];
+		// if(utility  == 1)
+		// 	printf("uitl= 1 - %i, %i, %i, %i, %i, %i, %i\n", utility_piece[0], utility_piece[1], utility_piece[2], utility_piece[3], utility_piece[4], utility_piece[5], utility_piece[6]);
+		return utility;
+		
+	} else {
+		// player 2 moves
+		// player 2 is MIN, player 2 wants the min possible utility
+
+		// try the 7 possible pieces
+		int states_tried = 0;
+		for(piece_idx = 0; piece_idx < 7; piece_idx++) {
+			uint64_t bits_dir[4];
+			uint64_t bb_dir[4];			
+			int utility_tmp[4] = {2, 2, 2, 2};
+
+			piece = piece_order[piece_idx];
+
+			//printf("piece: %i\n", piece);
+
+			// try the 4 possible directions
+			for (dir_idx = 0; dir_idx < 4; dir_idx++) {
+				dir = dir_order[dir_idx];
+				bits_dir[dir] = bits_2[piece_idx];
+				bb_dir[dir] = bb_2;
+
+				//printf("dir: %i\n", dir);
+
+				if (trydir(dir, &(bits_dir[dir]), &(bb_dir[dir]), bb_1) == 0) {
+					// possible to move this direction
+					utility_tmp[dir] = 0; // set to 0, as it is a possible state
+					// check if state has been visited
+					if(has_visited_state(bb_1, bb_dir[dir]) == 1) {
+						// new state!
+						// need a copy of the modified board for each try
+						uint64_t bits_tmp[7];
+						memcpy(bits_tmp, bits_2, 7*sizeof(uint64_t));
+						bits_tmp[piece_idx] = bits_dir[dir];
+						// perform minimax on this move
+						utility_tmp[dir] = alphabeta(1, bb_1, bb_dir[dir], bits_1, bits_tmp, curr_ply);
+					}
+				}
+			}
+
+			// now check in  order which one to take
+			utility_piece[piece_idx] = utility_tmp[dir_order[0]];
+			utility_dir[piece_idx] = dir_order[0];
+			for(dir_idx = 1; dir_idx < 4; dir_idx++) {
+				dir = dir_order[dir_idx];
+				if(utility_piece[piece_idx] > utility_tmp[dir]) {
+					utility_piece[piece_idx] = utility_tmp[dir];
+					utility_dir[piece_idx] = dir;
+				}
+			}
+		}
+
+		// now check in order which one to take
+		utility = utility_piece[piece_order[0]];
+		piece = piece_order[0];
+		for(piece_idx = 1; piece_idx < 7; piece_idx++) {
+			piece = piece_order[piece_idx];
+			if(utility > utility_piece[piece]) {
+				utility = utility_piece[piece];
+				piece_to_move = piece;
+			}
+		}
+		
+		dir_to_move = utility_dir[piece];
+		// if(utility > 1 || utility < -1) {
+		// 	printf("uitl > 1, wut? - %i, %i, %i, %i, %i, %i, %i\n", utility_piece[0], utility_piece[1], utility_piece[2], utility_piece[3], utility_piece[4], utility_piece[5], utility_piece[6]);
+		// 	printf("states tried: %i\n", states_tried);
+		// 	showstate(bits_1, bits_2);
+		// }
+		return utility;
+	}
+}
+
+int trydir(int dir, uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent) {
+	switch(dir) {
+	case N:
+		return trynorth(piece, bb_own, bb_oponent);
+		break;
+	case S:
+		return trysouth(piece, bb_own, bb_oponent);
+		break;
+	case E:
+		return tryeast(piece, bb_own, bb_oponent);
+		break;
+	case W:
+		return trywest(piece, bb_own, bb_oponent);
+		break;
 	}
 }
 

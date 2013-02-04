@@ -27,6 +27,7 @@ typedef struct node {
 
 uint64_t generate_key(uint64_t w, uint64_t b);
 int has_visited_state(uint64_t bitboard_white, uint64_t bitboard_black);
+int trydir(int dir, uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent);
 int trynorth(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent);
 int trysouth(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent);
 int tryeast(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent);
@@ -45,3 +46,9 @@ int minimax(int turn,
 			uint64_t bits_1[],
 			uint64_t bits_2[],
 			int curr_ply);
+int alphabeta(	int turn,
+				uint64_t bb_1,
+				uint64_t bb_2,
+				uint64_t bits_1[],
+				uint64_t bits_2[],
+				int curr_ply);

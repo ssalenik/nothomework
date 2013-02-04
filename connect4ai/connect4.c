@@ -248,7 +248,7 @@ int main(int argc, char** argv) {
     gettimeofday(&tvBegin, NULL);
 
 	int states;
-	ai_turn(bitboard_white, bitboard_black, white_bits, black_bits, 6, &states);
+	ai_turn(bitboard_white, bitboard_black, white_bits, black_bits, 4, &states);
 
 	//end
     gettimeofday(&tvEnd, NULL);
