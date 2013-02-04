@@ -179,10 +179,10 @@ int minimax(int turn,
 		// previous turn was of player 1
 		int end = check_endgame(bb_1);
 		if(end) {
-			// player 1 is max
-			// printf("won: %i\n", end);
-			// printf("bb1: %llu\n", bb_1);
-			// showstate(bits_1, bits_2);
+			//player 1 is max
+			//printf("won: %i\n", end);
+			//printf("bb1: %llu\n", bb_1);
+			//showstate(bits_1, bits_2);
 			return 1;
 		}
 	}
@@ -195,7 +195,7 @@ int minimax(int turn,
 	curr_ply++;
 
 	int utility; // the result
-	int utility_piece[7] = {-2, -2, -2, -2, -2, -2, -2}; // utility of each piece
+	int utility_piece[7] = {0, 0, 0, 0, 0, 0, 0}; // utility of each piece
 	int utility_dir[7]; // direction of the utility picked
 	int piece_idx;
 	if(turn == 1){
@@ -211,6 +211,7 @@ int minimax(int turn,
 			int utility_tmp[4] = {-2, -2, -2, -2};
 			if (trynorth(&north, &bb_north, bb_2) == 0) {
 				// possible to move north
+				utility_tmp[N] = 0; // set to 0, as it is a possible state
 				// check if state has been visited
 				if(has_visited_state(bb_north, bb_2) == 1) {
 					// new state!
@@ -227,6 +228,7 @@ int minimax(int turn,
 			uint64_t bb_east = bb_1;
 			if (tryeast(&east, &bb_east, bb_2) == 0) {
 				// possible to move east
+				utility_tmp[E] = 0; // set to 0, as it is a possible state
 				// check if state has been visited
 				if(has_visited_state(bb_east, bb_2) == 1) {
 					// new state!
@@ -243,6 +245,7 @@ int minimax(int turn,
 			uint64_t bb_west = bb_1;
 			if (trywest(&west, &bb_west, bb_2) == 0) {
 				// possible to move west
+				utility_tmp[W] = 0; // set to 0, as it is a possible state
 				// check if state has been visited
 				if(has_visited_state(bb_west, bb_2) == 1) {
 					// new state!
@@ -259,6 +262,7 @@ int minimax(int turn,
 			uint64_t bb_south = bb_1;
 			if (trysouth(&south, &bb_south, bb_2) == 0) {
 				// possible to move south
+				utility_tmp[S] = 0; // set to 0, as it is a possible state
 				// check if state has been visited
 				if(has_visited_state(bb_south, bb_2) == 1) {
 					// new state!
@@ -303,6 +307,8 @@ int minimax(int turn,
 
 		piece_to_move = piece_idx;
 		dir_to_move = utility_dir[piece_to_move];
+		if(utility  == 1)
+			printf("uitl= 1 - %i, %i, %i, %i, %i, %i, %i\n", utility_piece[0], utility_piece[1], utility_piece[2], utility_piece[3], utility_piece[4], utility_piece[5], utility_piece[6]);
 		return utility;
 		
 	} else {
@@ -310,6 +316,7 @@ int minimax(int turn,
 		// player 2 is MIN, player 2 wants the min possible utility
 
 		// try the 7 possible pieces
+		int states_tried = 0;
 		for(piece_idx = 0; piece_idx < 7; piece_idx++) {
 			// try the 4 possible directions
 			// north
@@ -318,6 +325,7 @@ int minimax(int turn,
 			int utility_tmp[4] = {2, 2, 2, 2};
 			if (trynorth(&north, &bb_north, bb_1) == 0) {
 				// possible to move north
+				utility_tmp[N] = 0; // set to 0, as it is a possible state
 				// check if state has been visited
 				if(has_visited_state(bb_1, bb_north) == 1) {
 					// new state!
@@ -327,6 +335,7 @@ int minimax(int turn,
 					bits_tmp[piece_idx] = north;
 					// perform minimax on this move
 					utility_tmp[N] = minimax(1, bb_1, bb_north, bits_1, bits_tmp, curr_ply);
+					states_tried++;
 				}
 			}
 			// east
@@ -334,6 +343,7 @@ int minimax(int turn,
 			uint64_t bb_east = bb_2;
 			if (tryeast(&east, &bb_east, bb_1) == 0) {
 				// possible to move east
+				utility_tmp[E] = 0; // set to 0, as it is a possible state
 				// check if state has been visited
 				if(has_visited_state(bb_1, bb_east) == 1) {
 					// new state!
@@ -343,6 +353,7 @@ int minimax(int turn,
 					bits_tmp[piece_idx] = east;
 					// perform minimax on this move
 					utility_tmp[E] = minimax(1, bb_1, bb_east, bits_1, bits_tmp, curr_ply);
+					states_tried++;
 				}
 			}
 			// west
@@ -350,6 +361,7 @@ int minimax(int turn,
 			uint64_t bb_west = bb_2;
 			if (trywest(&west, &bb_west, bb_1) == 0) {
 				// possible to move west
+				utility_tmp[W] = 0; // set to 0, as it is a possible state
 				// check if state has been visited
 				if(has_visited_state(bb_1, bb_west) == 1) {
 					// new state!
@@ -359,6 +371,7 @@ int minimax(int turn,
 					bits_tmp[piece_idx] = west;
 					// perform minimax on this move
 					utility_tmp[W] = minimax(1, bb_1, bb_west, bits_1, bits_tmp, curr_ply);
+					states_tried++;
 				}
 			}
 			// south
@@ -366,6 +379,7 @@ int minimax(int turn,
 			uint64_t bb_south = bb_2;
 			if (trysouth(&south, &bb_south, bb_1) == 0) {
 				// possible to move south
+				utility_tmp[S] = 0; // set to 0, as it is a possible state
 				// check if state has been visited
 				if(has_visited_state(bb_1, bb_south) == 1) {
 					// new state!
@@ -375,6 +389,7 @@ int minimax(int turn,
 					bits_tmp[piece_idx] = south;
 					// perform minimax on this move
 					utility_tmp[S] = minimax(1, bb_1, bb_south, bits_1, bits_tmp, curr_ply);
+					states_tried++;
 				}
 			}
 
@@ -410,6 +425,11 @@ int minimax(int turn,
 
 		piece_to_move = piece_idx;
 		dir_to_move = utility_dir[piece_to_move];
+		if(utility > 1 || utility < -1) {
+			printf("uitl > 1, wut? - %i, %i, %i, %i, %i, %i, %i\n", utility_piece[0], utility_piece[1], utility_piece[2], utility_piece[3], utility_piece[4], utility_piece[5], utility_piece[6]);
+			printf("states tried: %i\n", states_tried);
+			showstate(bits_1, bits_2);
+		}
 		return utility;
 	}
 }
