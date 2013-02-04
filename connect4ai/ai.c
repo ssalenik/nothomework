@@ -13,6 +13,7 @@ khash_t(64) *h;
 
 int ply_cutoff; // 2 * depth_cutoff
 uint64_t states_visited = 0;
+int collisions = 0;
 
 int piece_to_move;
 int dir_to_move;
@@ -148,6 +149,7 @@ int has_visited_state(uint64_t bitboard_white, uint64_t bitboard_black) {
 		new_state->next = NULL;
 		old_list->next = new_state;
 
+		collisions++;	// key was the same, but it was a different state
 		states_visited++;	//incremente states visited count
 		return 1;
 	}
