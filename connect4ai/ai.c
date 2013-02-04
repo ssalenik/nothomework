@@ -18,6 +18,21 @@ int collisions = 0;
 int piece_to_move;
 int dir_to_move;
 
+struct timeval tvBegin, tvEnd, tvDiff;
+
+/* 1 if running out of time, 0 otherwise */
+int check_time()
+{
+	struct timeval tvEnd;
+	// curr time
+	gettimeofday(&tvEnd, NULL);
+    int diff = (tvEnd.tv_sec) - (tvBegin.tv_sec);
+    // tvDiff.tv_sec = diff / 1000000;
+    // tvDiff.tv_usec = diff % 1000000;
+
+    return (diff>=19);
+}
+
 /* checks if end-game has been reached
  * returns:
  * 0 - if no win
@@ -64,6 +79,9 @@ int ai_turn(uint64_t bb_1,
 	h = kh_init(64);  // allocate a hash table
 	ply_cutoff = 2*d_cutoff;
 	has_visited_state(bb_1, bb_2); // save the initial state
+
+	// get initial time
+    gettimeofday(&tvBegin, NULL);
 
 	int util = minimax(1, bb_1, bb_2, bits_1, bits_2, 0);
 
@@ -195,6 +213,8 @@ int minimax(int turn,
 		return 0;
 	}
 	curr_ply++;
+
+	check_time();
 
 	int utility; // the result
 	int utility_piece[7] = {0, 0, 0, 0, 0, 0, 0}; // utility of each piece
