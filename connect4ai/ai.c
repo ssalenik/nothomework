@@ -1,6 +1,6 @@
 #include "ai.h"
 
-#define DEBUG 1
+#define DEBUG 0
 
 // borders
 #define BORDER_W 18085043209519168
@@ -11,6 +11,12 @@
 KHASH_MAP_INIT_INT64(64, list_t*);
 khash_t(64) *h;
 
+int ply_cutoff; // 2 * depth_cutoff
+uint64_t states_visited = 0;
+
+int piece_to_move;
+int dir_to_move;
+
 /* checks if end-game has been reached
  * returns:
  * 0 - if no win
@@ -19,7 +25,9 @@ khash_t(64) *h;
  * 3 - if win (diagonal \ )
  * 4 - if win (diagonal / )
  *
- * algo adapted from 	
+ * algo adapted from:
+ * http://stackoverflow.com/questions/7033165/algorithm-to-check-a-connect-four-field
+ * which an algo by John Tromp from http://homepages.cwi.nl/~tromp/c4/fhour.html	
  */
 int check_endgame(uint64_t board) {
 	// horizontal check
@@ -46,19 +54,22 @@ uint64_t generate_key(uint64_t w, uint64_t b) {
 	return w ^ (b << 15);
 }
 
-int ai_turn(turn_t turn,
-			uint64_t bitboard_white,
-			uint64_t bitboard_black,
-			uint64_t white_bits[],
-			uint64_t black_bits[],
+int ai_turn(uint64_t bb_1,
+			uint64_t bb_2,
+			uint64_t bits_1[],
+			uint64_t bits_2[],
 			int d_cutoff,
-			int* states_visited) {
+			int* states) {
 	h = kh_init(64);  // allocate a hash table
-	has_visited_state(bitboard_white, bitboard_black); // save the initial state
+	ply_cutoff = 2*d_cutoff;
+	has_visited_state(bb_1, bb_2); // save the initial state
 
-	minimax(turn, bitboard_white, bitboard_black, white_bits, black_bits, 0);
+	int util = minimax(1, bb_1, bb_2, bits_1, bits_2, 0);
 
-	return 0;
+	printf("util: %i\nstates: %llu\npiece to move: %i\ndir to move: %i\n", util, states_visited, piece_to_move, dir_to_move);
+
+	*states = states_visited;
+	return util;
 }
 
 /* function which checks if the state given has already been visited
@@ -89,6 +100,8 @@ int has_visited_state(uint64_t bitboard_white, uint64_t bitboard_black) {
 		new_list->b_black = bitboard_black;
 		new_list->next = NULL;
 		kh_value(h, k) = new_list;
+
+		states_visited++;	//incremente states visited count
 		return 1;
 
 	} else {
@@ -134,52 +147,278 @@ int has_visited_state(uint64_t bitboard_white, uint64_t bitboard_black) {
 		new_state->b_black = bitboard_black;
 		new_state->next = NULL;
 		old_list->next = new_state;
+
+		states_visited++;	//incremente states visited count
 		return 1;
 	}
 
 }
 
 /* performs recursive minimax algo
- * returns as soon as a winning move is found, ie:
- *		the algo won't continue if a guaranteed ai move is found
+ * assumes player 1 is max player
  *
  * @return: 1 if player who starts (turn) wins
  *			0 if its a draw/no winning state is found before cutoff is reached
  *			-1 if player who starts (turn) loses
  */
-int minimax(turn_t turn,
-			uint64_t bitboard_white,
-			uint64_t bitboard_black,
-			uint64_t white_bits[],
-			uint64_t black_bits[],
+int minimax(int turn,
+			uint64_t bb_1,
+			uint64_t bb_2,
+			uint64_t bits_1[],
+			uint64_t bits_2[],
 			int curr_ply) {
-	int piece_idx, dir;
-	
-	// first check if this move resulted in an end-game
-	if(turn == white) {
-		// if current turn is white, previous move was black
-		if(check_endgame(bitboard_black))
+	if(turn == 1) {
+		// previous turn was of player 2
+		// check if it was a winning move
+		if(check_endgame(bb_2)) {
+			// player 2 is min
+			//printf("lost\n");
 			return -1;
-	}
-
-	// white is MAX, black is MIN
-	for(piece_idx = 0; piece_idx < 7; piece_idx++) {
-		// try possible move for each piece
-		for(dir = 0; dir < 4; dir++) {
-			// try the 4 possible directions
-
-
+		}
+	} else {
+		// previous turn was of player 1
+		int end = check_endgame(bb_1);
+		if(end) {
+			// player 1 is max
+			// printf("won: %i\n", end);
+			// printf("bb1: %llu\n", bb_1);
+			// showstate(bits_1, bits_2);
+			return 1;
 		}
 	}
+	// check if we have reached the depth cutoff
+	
+	if (curr_ply == ply_cutoff) {
+		// depth cutoff, and no winner
+		return 0;
+	}
+	curr_ply++;
 
-	return 0;
+	int utility; // the result
+	int utility_piece[7] = {-2, -2, -2, -2, -2, -2, -2}; // utility of each piece
+	int utility_dir[7]; // direction of the utility picked
+	int piece_idx;
+	if(turn == 1){
+		// player 1 moves
+		// player 1 is MAX, player 1 wants the max possible utility
+
+		// try the 7 possible pieces
+		for(piece_idx = 0; piece_idx < 7; piece_idx++) {
+			// try the 4 possible directions
+			// north
+			uint64_t north = bits_1[piece_idx];
+			uint64_t bb_north = bb_1;
+			int utility_tmp[4] = {-2, -2, -2, -2};
+			if (trynorth(&north, &bb_north, bb_2) == 0) {
+				// possible to move north
+				// check if state has been visited
+				if(has_visited_state(bb_north, bb_2) == 1) {
+					// new state!
+					// need a copy of the modified board for each try
+					uint64_t bits_tmp[7];
+					memcpy(bits_tmp, bits_1, 7*sizeof(uint64_t));
+					bits_tmp[piece_idx] = north;
+					// perform minimax on this move
+					utility_tmp[N] = minimax(2, bb_north, bb_2, bits_tmp, bits_2, curr_ply);
+				}
+			}
+			// east
+			uint64_t east = bits_1[piece_idx];
+			uint64_t bb_east = bb_1;
+			if (tryeast(&east, &bb_east, bb_2) == 0) {
+				// possible to move east
+				// check if state has been visited
+				if(has_visited_state(bb_east, bb_2) == 1) {
+					// new state!
+					// need a copy of the modified board for each try
+					uint64_t bits_tmp[7];
+					memcpy(bits_tmp, bits_1, 7*sizeof(uint64_t));
+					bits_tmp[piece_idx] = east;
+					// perform minimax on this move
+					utility_tmp[E] = minimax(2, bb_east, bb_2, bits_tmp, bits_2, curr_ply);
+				}
+			}
+			// west
+			uint64_t west = bits_1[piece_idx];
+			uint64_t bb_west = bb_1;
+			if (trywest(&west, &bb_west, bb_2) == 0) {
+				// possible to move west
+				// check if state has been visited
+				if(has_visited_state(bb_west, bb_2) == 1) {
+					// new state!
+					// need a copy of the modified board for each try
+					uint64_t bits_tmp[7];
+					memcpy(bits_tmp, bits_1, 7*sizeof(uint64_t));
+					bits_tmp[piece_idx] = west;
+					// perform minimax on this move
+					utility_tmp[W] = minimax(2, bb_west, bb_2, bits_tmp, bits_2, curr_ply);
+				}
+			}
+			// south
+			uint64_t south = bits_1[piece_idx];
+			uint64_t bb_south = bb_1;
+			if (trysouth(&south, &bb_south, bb_2) == 0) {
+				// possible to move south
+				// check if state has been visited
+				if(has_visited_state(bb_south, bb_2) == 1) {
+					// new state!
+					// need a copy of the modified board for each try
+					uint64_t bits_tmp[7];
+					memcpy(bits_tmp, bits_1, 7*sizeof(uint64_t));
+					bits_tmp[piece_idx] = south;
+					// perform minimax on this move
+					utility_tmp[S] = minimax(2, bb_south, bb_2, bits_tmp, bits_2, curr_ply);
+				}
+			}
+
+			// 0 - north
+			// 1 - east
+			// 2 - west
+			// 3 - south
+			// now check in preferred order which one to take
+			int dir_order[4] = {E, W, N, S};
+			int dir_idx;
+			utility_piece[piece_idx] = utility_tmp[dir_order[0]];
+			utility_dir[piece_idx] = dir_order[0];
+			for(dir_idx = 1; dir_idx < 4; dir_idx++) {
+				if(utility_piece[piece_idx] < utility_tmp[dir_order[dir_idx]]) {
+					utility_piece[piece_idx] = utility_tmp[dir_order[dir_idx]];
+					utility_dir[piece_idx] = dir_order[dir_idx];
+				}
+			}
+		}
+
+		// 0 - 6 piece
+		// now check in preferred order which one to take
+		int piece_order[7] = {0, 1, 2, 3, 4, 5, 6};
+		int order_idx;
+		utility = utility_piece[piece_order[0]];
+		piece_idx = piece_order[0];
+		for(order_idx = 1; order_idx < 7; order_idx++) {
+			if(utility < utility_piece[piece_order[order_idx]]) {
+				utility = utility_piece[piece_order[order_idx]];
+				piece_idx = piece_order[order_idx];
+			}
+		}
+
+		piece_to_move = piece_idx;
+		dir_to_move = utility_dir[piece_to_move];
+		return utility;
+		
+	} else {
+		// player 2 moves
+		// player 2 is MIN, player 2 wants the min possible utility
+
+		// try the 7 possible pieces
+		for(piece_idx = 0; piece_idx < 7; piece_idx++) {
+			// try the 4 possible directions
+			// north
+			uint64_t north = bits_2[piece_idx];
+			uint64_t bb_north = bb_2;
+			int utility_tmp[4] = {2, 2, 2, 2};
+			if (trynorth(&north, &bb_north, bb_1) == 0) {
+				// possible to move north
+				// check if state has been visited
+				if(has_visited_state(bb_1, bb_north) == 1) {
+					// new state!
+					// need a copy of the modified board for each try
+					uint64_t bits_tmp[7];
+					memcpy(bits_tmp, bits_2, 7*sizeof(uint64_t));
+					bits_tmp[piece_idx] = north;
+					// perform minimax on this move
+					utility_tmp[N] = minimax(1, bb_1, bb_north, bits_1, bits_tmp, curr_ply);
+				}
+			}
+			// east
+			uint64_t east = bits_2[piece_idx];
+			uint64_t bb_east = bb_2;
+			if (tryeast(&east, &bb_east, bb_1) == 0) {
+				// possible to move east
+				// check if state has been visited
+				if(has_visited_state(bb_1, bb_east) == 1) {
+					// new state!
+					// need a copy of the modified board for each try
+					uint64_t bits_tmp[7];
+					memcpy(bits_tmp, bits_2, 7*sizeof(uint64_t));
+					bits_tmp[piece_idx] = east;
+					// perform minimax on this move
+					utility_tmp[E] = minimax(1, bb_1, bb_east, bits_1, bits_tmp, curr_ply);
+				}
+			}
+			// west
+			uint64_t west = bits_2[piece_idx];
+			uint64_t bb_west = bb_2;
+			if (trywest(&west, &bb_west, bb_1) == 0) {
+				// possible to move west
+				// check if state has been visited
+				if(has_visited_state(bb_1, bb_west) == 1) {
+					// new state!
+					// need a copy of the modified board for each try
+					uint64_t bits_tmp[7];
+					memcpy(bits_tmp, bits_2, 7*sizeof(uint64_t));
+					bits_tmp[piece_idx] = west;
+					// perform minimax on this move
+					utility_tmp[W] = minimax(1, bb_1, bb_west, bits_1, bits_tmp, curr_ply);
+				}
+			}
+			// south
+			uint64_t south = bits_2[piece_idx];
+			uint64_t bb_south = bb_2;
+			if (trysouth(&south, &bb_south, bb_1) == 0) {
+				// possible to move south
+				// check if state has been visited
+				if(has_visited_state(bb_1, bb_south) == 1) {
+					// new state!
+					// need a copy of the modified board for each try
+					uint64_t bits_tmp[7];
+					memcpy(bits_tmp, bits_2, 7*sizeof(uint64_t));
+					bits_tmp[piece_idx] = south;
+					// perform minimax on this move
+					utility_tmp[S] = minimax(1, bb_1, bb_south, bits_1, bits_tmp, curr_ply);
+				}
+			}
+
+			// 0 - north
+			// 1 - east
+			// 2 - west
+			// 3 - south
+			// now check in preferred order which one to take
+			int dir_order[4] = {E, W, N, S};
+			int dir_idx;
+			utility_piece[piece_idx] = utility_tmp[dir_order[0]];
+			utility_dir[piece_idx] = dir_order[0];
+			for(dir_idx = 1; dir_idx < 4; dir_idx++) {
+				if(utility_piece[piece_idx] > utility_tmp[dir_order[dir_idx]]) {
+					utility_piece[piece_idx] = utility_tmp[dir_order[dir_idx]];
+					utility_dir[piece_idx] = dir_order[dir_idx];
+				}
+			}
+		}
+
+		// 0 - 6 piece
+		// now check in preferred order which one to take
+		int piece_order[7] = {0, 1, 2, 3, 4, 5, 6};
+		int order_idx;
+		utility = utility_piece[piece_order[0]];
+		piece_idx = piece_order[0];
+		for(order_idx = 1; order_idx < 7; order_idx++) {
+			if(utility > utility_piece[piece_order[order_idx]]) {
+				utility = utility_piece[piece_order[order_idx]];
+				piece_idx = piece_order[order_idx];
+			}
+		}
+
+		piece_to_move = piece_idx;
+		dir_to_move = utility_dir[piece_to_move];
+		return utility;
+	}
 }
 
 /* attempts to move the given piece north one spot
- * returns 0 if successful, -1 if move not possible
+ * returns 0 if successful, 1 if move not possible
  * updates piece and the corresponding bitboard if possible
  */
-int north(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent) {
+int trynorth(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent) {
 	uint64_t piece_tmp = *piece;
 	// first check if its trying to move off the board
 	if (piece_tmp & BORDER_N)
@@ -191,15 +430,16 @@ int north(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent) {
 		return 1;
 	// move is successful, alter the piece and its board
 	*bb_own = *bb_own - *piece;
+	*bb_own = *bb_own | piece_tmp;
 	*piece = piece_tmp;
 	return 0;
 }
 
 /* attempts to move the given piece south one spot
- * returns 0 if successful, -1 if move not possible
+ * returns 0 if successful, 1 if move not possible
  * updates piece and the corresponding bitboard if possible
  */
-int south(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent) {
+int trysouth(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent) {
 	uint64_t piece_tmp = *piece;
 	// first check if its trying to move off the board
 	if (piece_tmp & BORDER_S)
@@ -211,15 +451,16 @@ int south(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent) {
 		return 1;
 	// move is successful, alter the piece and its board
 	*bb_own = *bb_own - *piece;
+	*bb_own = *bb_own | piece_tmp;
 	*piece = piece_tmp;
 	return 0;
 }
 
 /* attempts to move the given piece west one spot
- * returns 0 if successful, -1 if move not possible
+ * returns 0 if successful, 1 if move not possible
  * updates piece and the corresponding bitboard if possible
  */
-int west(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent) {
+int trywest(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent) {
 	uint64_t piece_tmp = *piece;
 	// first check if its trying to move off the board
 	if (piece_tmp & BORDER_E)
@@ -231,6 +472,7 @@ int west(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent) {
 		return 1;
 	// move is successful, alter the piece and its board
 	*bb_own = *bb_own - *piece;
+	*bb_own = *bb_own | piece_tmp;
 	*piece = piece_tmp;
 	return 0;
 }
@@ -239,7 +481,7 @@ int west(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent) {
  * returns 0 if successful, 1 if move not possible
  * updates piece and the corresponding bitboard if possible
  */
-int east(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent) {
+int tryeast(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent) {
 	uint64_t piece_tmp = *piece;
 	// first check if its trying to move off the board
 	if (piece_tmp & BORDER_W)
@@ -251,6 +493,7 @@ int east(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent) {
 		return 1;
 	// move is successful, alter the piece and its board
 	*bb_own = *bb_own - *piece;
+	*bb_own = *bb_own | piece_tmp;
 	*piece = piece_tmp;
 	return 0;
 }

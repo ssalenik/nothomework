@@ -2,19 +2,6 @@
 
 #define DEFAULT_START "default.txt"
 
-/* game state */
-char w = 'o';	//white
-char b = 'x';	//black
-char e = '.';	//empty
-
-char empty_state[8][8] = {	{' ', '1', '2', '3', '4', '5', '6', '7'}, \
-							{'1', '.', '.', '.', '.', '.', '.', '.'}, \
-							{'2', '.', '.', '.', '.', '.', '.', '.'}, \
-							{'3', '.', '.', '.', '.', '.', '.', '.'}, \
-							{'4', '.', '.', '.', '.', '.', '.', '.'}, \
-							{'5', '.', '.', '.', '.', '.', '.', '.'}, \
-							{'6', '.', '.', '.', '.', '.', '.', '.'}, \
-							{'7', '.', '.', '.', '.', '.', '.', '.'}};
 
 /* bitboard representation of board
  *    1  2  3  4  5  6  7
@@ -36,56 +23,6 @@ uint64_t bitboard_black = 0;	// the entire black board
 // uint64_t black_bits[7] = {1,1,1,1,1,1,1};	// position of individual black pieces
 uint64_t white_bits[7] = {1,128,16384,2097152,268435456,34359738368,4398046511104};	// position of individual white pieces
 uint64_t black_bits[7] = {64,8192,1048576,134217728,17179869184,2199023255552,281474976710656};	// position of individual black pieces
-
-
-
-/*
- * prints the game state from the bitboard representation
- */
-int showstate() {
-	int i, j;
-	printf("\n");
-	char state_tmp[8][8];
-
-	// copy empty state
-	memcpy(state_tmp, empty_state, 64*sizeof(char));
-
-	// get all the pieces
-	uint64_t white_tmp;
-	uint64_t black_tmp;
-	int white_idx = 0;
-	int black_idx = 0;
-	for(i = 0; i < 7; i++) {
-		white_tmp = white_bits[i];
-		black_tmp = black_bits[i];
-		white_idx = 0;
-		black_idx = 0;
-		// get the bit position of the white piece
-		while(white_tmp != 1) {
-			white_tmp = white_tmp >> 1;
-			white_idx++;
-		}
-		// get the bit position of the black piece
-		while(black_tmp != 1) {
-			black_tmp = black_tmp >> 1;
-			black_idx++;
-		}
-		// mark the board
-		state_tmp[bitboard_lookup[white_idx][1]][bitboard_lookup[white_idx][0]] = w;
-		state_tmp[bitboard_lookup[black_idx][1]][bitboard_lookup[black_idx][0]] = b;
-	}
-
-	// now print the board
-	printf("\n");
-	for(i = 0; i < 8; i++) {
-		for(j = 0; j < 8; j++) {
-			printf("%c ", state_tmp[i][j]);
-		}
-		printf("\n");
-	}
-
-	return 0;
-}
 
 /* prints the help */
 int printhelp() {
@@ -283,44 +220,41 @@ int main(int argc, char** argv) {
     	exit(1);
 
     printf("starting position:\n");
-	showstate();
+	showstate(white_bits, black_bits);
 
-	turn_t turn = white;
+	// turn_t turn = white;
 
-	int done = 0;
-	done = check_endgame(bitboard_white);
+	// tryeast(&white_bits[6], &bitboard_white, bitboard_black);
+	// showstate();
+ //    tryeast(&white_bits[6], &bitboard_white, bitboard_black);
+ //    showstate();
 
-	printf("\n");
+	// int done = 0;
+	// done = check_endgame(bitboard_white);
 
-	switch(done) {
-	case 0:
-		printf("no winner\n");
-		break;
-	case 1:
-		printf("white wins horizontal\n");
-		break;
-	case 2:
-		printf("white wins vertical\n");
-		break;
-	case 3:
-		printf("white wins diagonal /\n");
-		break;
-	case 4:
-		printf("white wins diagonal \\\n");
-		break;
-	}
-	printf("\n");
+	int states;
+	ai_turn(bitboard_white, bitboard_black, white_bits, black_bits, 6, &states);
 
-    int states_visited;
-    //ai_turn(turn, bitboard_white, bitboard_black, white_bits, black_bits, 5, &states_visited);
+	// printf("\n");
 
-    //north(&white_bits[3], &bitboard_white, bitboard_black);
-    //south(&white_bits[3], &bitboard_white, bitboard_black);
-    int result = east(&white_bits[5], &bitboard_white, bitboard_black);
-    //west(&white_bits[3], &bitboard_white, bitboard_black);
-    printf("result: %i\n", result);
-    showstate();
-    return 0;
+	// switch(done) {
+	// case 0:
+	// 	printf("no winner\n");
+	// 	break;
+	// case 1:
+	// 	printf("white wins horizontal\n");
+	// 	break;
+	// case 2:
+	// 	printf("white wins vertical\n");
+	// 	break;
+	// case 3:
+	// 	printf("white wins diagonal /\n");
+	// 	break;
+	// case 4:
+	// 	printf("white wins diagonal \\\n");
+	// 	break;
+	// }
+	// printf("\n");
 
 	// while(!done) {
 	// 	if(turn == white) {

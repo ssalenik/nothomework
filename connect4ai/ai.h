@@ -8,13 +8,13 @@
 #include <string.h>
 
 #include "khash.h"
-typedef enum {white, black} turn_t;
+#include "printstate.h"
 
-// struct linked_list {
-//    uint64_t bitboard_white;
-//    uint64_t bitboard_black;
-//    struct linked_list* next;
-// };
+typedef enum {white, black} turn_t;
+#define N 0
+#define E 1
+#define W 2
+#define S 3
 
 typedef struct node {
  	uint64_t b_white;
@@ -26,22 +26,21 @@ typedef struct node {
 
 uint64_t generate_key(uint64_t w, uint64_t b);
 int has_visited_state(uint64_t bitboard_white, uint64_t bitboard_black);
-int north(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent);
-int south(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent);
-int east(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent);
-int west(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent);
+int trynorth(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent);
+int trysouth(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent);
+int tryeast(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent);
+int trywest(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent);
 int check_endgame(uint64_t board);
-int ai_turn(turn_t turn,
-			uint64_t bitboard_white,
-			uint64_t bitboard_black,
-			uint64_t white_bits[],
-			uint64_t black_bits[],
+int ai_turn(uint64_t bb_1,
+			uint64_t bb_2,
+			uint64_t bits_1[],
+			uint64_t bits_2[],
 			int d_cutoff,
-			int* states_visited);
+			int* states);
 
-int minimax(turn_t turn,
-			uint64_t bitboard_white,
-			uint64_t bitboard_black,
-			uint64_t white_bits[],
-			uint64_t black_bits[],
+int minimax(int turn,
+			uint64_t bb_1,
+			uint64_t bb_2,
+			uint64_t bits_1[],
+			uint64_t bits_2[],
 			int curr_ply);
