@@ -46,6 +46,16 @@ int printhelp() {
 	return 0;
 }
 
+/* Return 1 if the difference is negative, otherwise 0.  */
+int timeval_subtract(struct timeval *result, struct timeval *t2, struct timeval *t1)
+{
+    long int diff = (t2->tv_usec + 1000000 * t2->tv_sec) - (t1->tv_usec + 1000000 * t1->tv_sec);
+    result->tv_sec = diff / 1000000;
+    result->tv_usec = diff % 1000000;
+
+    return (diff<0);
+}
+
 /* gets input from user */
 int getinput() {
 
@@ -232,8 +242,19 @@ int main(int argc, char** argv) {
 	// int done = 0;
 	// done = check_endgame(bitboard_white);
 
+	struct timeval tvBegin, tvEnd, tvDiff;
+
+    // begin
+    gettimeofday(&tvBegin, NULL);
+
 	int states;
 	ai_turn(bitboard_white, bitboard_black, white_bits, black_bits, 6, &states);
+
+	//end
+    gettimeofday(&tvEnd, NULL);
+    // diff
+    timeval_subtract(&tvDiff, &tvEnd, &tvBegin);
+    printf("%ld.%06ld\n", tvDiff.tv_sec, tvDiff.tv_usec);
 
 	// printf("\n");
 

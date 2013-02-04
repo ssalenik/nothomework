@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <inttypes.h>
 #include <string.h>
+#include <sys/time.h>
 
 #include "ai.h"
 #include "printstate.h"
