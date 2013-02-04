@@ -93,9 +93,9 @@ int ai_turn(uint64_t bb_1,
 	//alphabeta
 	alpha_min = -1;
 	beta_max = 1;
-	//alpha = alphabeta(1, bb_1, bb_2, bits_1, bits_2, 0);
+	// alpha = alphabeta(1, bb_1, bb_2, bits_1, bits_2, 0);
 
-	//util = alpha;
+	// util = alpha;
 
 	printf("util: %i\nstates: %llu\ncollisions: %i\npiece to move: %i\ndir to move: %i\n", util, states_visited, collisions, piece_to_move, dir_to_move);
 
@@ -232,115 +232,68 @@ int minimax(int turn,
 	int utility_piece[7] = {0, 0, 0, 0, 0, 0, 0}; // utility of each piece
 	int utility_dir[7]; // direction of the utility picked
 	int piece_idx;
+	int dir_idx;
+	int dir_order[4] = {E, W, N, S};
+	int dir;
+	int piece_order[7] = {0, 1, 2, 3, 4, 5, 6};
+	int piece;
 	if(turn == 1){
 		// player 1 moves
 		// player 1 is MAX, player 1 wants the max possible utility
 
 		// try the 7 possible pieces
 		for(piece_idx = 0; piece_idx < 7; piece_idx++) {
-			// try the 4 possible directions
-			// north
-			uint64_t north = bits_1[piece_idx];
-			uint64_t bb_north = bb_1;
+			uint64_t bits_dir[4];
+			uint64_t bb_dir[4];			
 			int utility_tmp[4] = {-2, -2, -2, -2};
-			if (trynorth(&north, &bb_north, bb_2) == 0) {
-				// possible to move north
-				utility_tmp[N] = 0; // set to 0, as it is a possible state
-				// check if state has been visited
-				if(has_visited_state(bb_north, bb_2) == 1) {
-					// new state!
-					// need a copy of the modified board for each try
-					uint64_t bits_tmp[7];
-					memcpy(bits_tmp, bits_1, 7*sizeof(uint64_t));
-					bits_tmp[piece_idx] = north;
-					// perform minimax on this move
-					utility_tmp[N] = minimax(2, bb_north, bb_2, bits_tmp, bits_2, curr_ply);
-				}
-			}
-			// east
-			uint64_t east = bits_1[piece_idx];
-			uint64_t bb_east = bb_1;
-			if (tryeast(&east, &bb_east, bb_2) == 0) {
-				// possible to move east
-				utility_tmp[E] = 0; // set to 0, as it is a possible state
-				// check if state has been visited
-				if(has_visited_state(bb_east, bb_2) == 1) {
-					// new state!
-					// need a copy of the modified board for each try
-					uint64_t bits_tmp[7];
-					memcpy(bits_tmp, bits_1, 7*sizeof(uint64_t));
-					bits_tmp[piece_idx] = east;
-					// perform minimax on this move
-					utility_tmp[E] = minimax(2, bb_east, bb_2, bits_tmp, bits_2, curr_ply);
-				}
-			}
-			// west
-			uint64_t west = bits_1[piece_idx];
-			uint64_t bb_west = bb_1;
-			if (trywest(&west, &bb_west, bb_2) == 0) {
-				// possible to move west
-				utility_tmp[W] = 0; // set to 0, as it is a possible state
-				// check if state has been visited
-				if(has_visited_state(bb_west, bb_2) == 1) {
-					// new state!
-					// need a copy of the modified board for each try
-					uint64_t bits_tmp[7];
-					memcpy(bits_tmp, bits_1, 7*sizeof(uint64_t));
-					bits_tmp[piece_idx] = west;
-					// perform minimax on this move
-					utility_tmp[W] = minimax(2, bb_west, bb_2, bits_tmp, bits_2, curr_ply);
-				}
-			}
-			// south
-			uint64_t south = bits_1[piece_idx];
-			uint64_t bb_south = bb_1;
-			if (trysouth(&south, &bb_south, bb_2) == 0) {
-				// possible to move south
-				utility_tmp[S] = 0; // set to 0, as it is a possible state
-				// check if state has been visited
-				if(has_visited_state(bb_south, bb_2) == 1) {
-					// new state!
-					// need a copy of the modified board for each try
-					uint64_t bits_tmp[7];
-					memcpy(bits_tmp, bits_1, 7*sizeof(uint64_t));
-					bits_tmp[piece_idx] = south;
-					// perform minimax on this move
-					utility_tmp[S] = minimax(2, bb_south, bb_2, bits_tmp, bits_2, curr_ply);
+
+			piece = piece_order[piece_idx];
+			// try the 4 possible directions
+			for (dir_idx = 0; dir_idx < 4; dir_idx++) {
+				dir = dir_order[dir_idx];
+				bits_dir[dir] = bits_1[piece];
+				bb_dir[dir] = bb_1;
+
+				if (trydir(dir, &(bits_dir[dir]), &(bb_dir[dir]), bb_2) == 0) {
+					// possible to move this direction
+					utility_tmp[dir] = 0; // set to 0, as it is a possible state
+					// check if state has been visited
+					if(has_visited_state(bb_dir[dir], bb_2) == 1) {
+						// new state!
+						// need a copy of the modified board for each try
+						uint64_t bits_tmp[7];
+						memcpy(bits_tmp, bits_1, 7*sizeof(uint64_t));
+						bits_tmp[piece] = bits_dir[dir];
+						// perform minimax on this move
+						utility_tmp[dir] = alphabeta(2, bb_dir[dir], bb_2, bits_tmp, bits_2, curr_ply);
+					}
 				}
 			}
 
-			// 0 - north
-			// 1 - east
-			// 2 - west
-			// 3 - south
-			// now check in preferred order which one to take
-			int dir_order[4] = {E, W, N, S};
-			int dir_idx;
-			utility_piece[piece_idx] = utility_tmp[dir_order[0]];
-			utility_dir[piece_idx] = dir_order[0];
+			// now check in  order which one to take
+			utility_piece[piece] = utility_tmp[dir_order[0]];
+			utility_dir[piece] = dir_order[0];
 			for(dir_idx = 1; dir_idx < 4; dir_idx++) {
-				if(utility_piece[piece_idx] < utility_tmp[dir_order[dir_idx]]) {
-					utility_piece[piece_idx] = utility_tmp[dir_order[dir_idx]];
-					utility_dir[piece_idx] = dir_order[dir_idx];
+				dir = dir_order[dir_idx];
+				if(utility_piece[piece] < utility_tmp[dir]) {
+					utility_piece[piece] = utility_tmp[dir];
+					utility_dir[piece] = dir;
 				}
 			}
 		}
 
-		// 0 - 6 piece
-		// now check in preferred order which one to take
-		int piece_order[7] = {0, 1, 2, 3, 4, 5, 6};
-		int order_idx;
+		// now check in order which one to take
 		utility = utility_piece[piece_order[0]];
-		piece_idx = piece_order[0];
-		for(order_idx = 1; order_idx < 7; order_idx++) {
-			if(utility < utility_piece[piece_order[order_idx]]) {
-				utility = utility_piece[piece_order[order_idx]];
-				piece_idx = piece_order[order_idx];
+		piece = piece_order[0];
+		for(piece_idx = 1; piece_idx < 7; piece_idx++) {
+			piece = piece_order[piece_idx];
+			if(utility < utility_piece[piece]) {
+				utility = utility_piece[piece];
+				piece_to_move = piece;
 			}
 		}
 
-		piece_to_move = piece_idx;
-		dir_to_move = utility_dir[piece_to_move];
+		dir_to_move = utility_dir[piece];
 		// if(utility  == 1)
 		// 	printf("uitl= 1 - %i, %i, %i, %i, %i, %i, %i\n", utility_piece[0], utility_piece[1], utility_piece[2], utility_piece[3], utility_piece[4], utility_piece[5], utility_piece[6]);
 		return utility;
@@ -352,113 +305,57 @@ int minimax(int turn,
 		// try the 7 possible pieces
 		int states_tried = 0;
 		for(piece_idx = 0; piece_idx < 7; piece_idx++) {
-			// try the 4 possible directions
-			// north
-			uint64_t north = bits_2[piece_idx];
-			uint64_t bb_north = bb_2;
+			uint64_t bits_dir[4];
+			uint64_t bb_dir[4];			
 			int utility_tmp[4] = {2, 2, 2, 2};
-			if (trynorth(&north, &bb_north, bb_1) == 0) {
-				// possible to move north
-				utility_tmp[N] = 0; // set to 0, as it is a possible state
-				// check if state has been visited
-				if(has_visited_state(bb_1, bb_north) == 1) {
-					// new state!
-					// need a copy of the modified board for each try
-					uint64_t bits_tmp[7];
-					memcpy(bits_tmp, bits_2, 7*sizeof(uint64_t));
-					bits_tmp[piece_idx] = north;
-					// perform minimax on this move
-					utility_tmp[N] = minimax(1, bb_1, bb_north, bits_1, bits_tmp, curr_ply);
-					states_tried++;
-				}
-			}
-			// east
-			uint64_t east = bits_2[piece_idx];
-			uint64_t bb_east = bb_2;
-			if (tryeast(&east, &bb_east, bb_1) == 0) {
-				// possible to move east
-				utility_tmp[E] = 0; // set to 0, as it is a possible state
-				// check if state has been visited
-				if(has_visited_state(bb_1, bb_east) == 1) {
-					// new state!
-					// need a copy of the modified board for each try
-					uint64_t bits_tmp[7];
-					memcpy(bits_tmp, bits_2, 7*sizeof(uint64_t));
-					bits_tmp[piece_idx] = east;
-					// perform minimax on this move
-					utility_tmp[E] = minimax(1, bb_1, bb_east, bits_1, bits_tmp, curr_ply);
-					states_tried++;
-				}
-			}
-			// west
-			uint64_t west = bits_2[piece_idx];
-			uint64_t bb_west = bb_2;
-			if (trywest(&west, &bb_west, bb_1) == 0) {
-				// possible to move west
-				utility_tmp[W] = 0; // set to 0, as it is a possible state
-				// check if state has been visited
-				if(has_visited_state(bb_1, bb_west) == 1) {
-					// new state!
-					// need a copy of the modified board for each try
-					uint64_t bits_tmp[7];
-					memcpy(bits_tmp, bits_2, 7*sizeof(uint64_t));
-					bits_tmp[piece_idx] = west;
-					// perform minimax on this move
-					utility_tmp[W] = minimax(1, bb_1, bb_west, bits_1, bits_tmp, curr_ply);
-					states_tried++;
-				}
-			}
-			// south
-			uint64_t south = bits_2[piece_idx];
-			uint64_t bb_south = bb_2;
-			if (trysouth(&south, &bb_south, bb_1) == 0) {
-				// possible to move south
-				utility_tmp[S] = 0; // set to 0, as it is a possible state
-				// check if state has been visited
-				if(has_visited_state(bb_1, bb_south) == 1) {
-					// new state!
-					// need a copy of the modified board for each try
-					uint64_t bits_tmp[7];
-					memcpy(bits_tmp, bits_2, 7*sizeof(uint64_t));
-					bits_tmp[piece_idx] = south;
-					// perform minimax on this move
-					utility_tmp[S] = minimax(1, bb_1, bb_south, bits_1, bits_tmp, curr_ply);
-					states_tried++;
+
+			piece = piece_order[piece_idx];
+			// try the 4 possible directions
+			for (dir_idx = 0; dir_idx < 4; dir_idx++) {
+				dir = dir_order[dir_idx];
+				bits_dir[dir] = bits_2[piece_idx];
+				bb_dir[dir] = bb_2;
+
+				if (trydir(dir, &(bits_dir[dir]), &(bb_dir[dir]), bb_1) == 0) {
+					// possible to move this direction
+					utility_tmp[dir] = 0; // set to 0, as it is a possible state
+					// check if state has been visited
+					if(has_visited_state(bb_1, bb_dir[dir]) == 1) {
+						// new state!
+						// need a copy of the modified board for each try
+						uint64_t bits_tmp[7];
+						memcpy(bits_tmp, bits_2, 7*sizeof(uint64_t));
+						bits_tmp[piece_idx] = bits_dir[dir];
+						// perform minimax on this move
+						utility_tmp[dir] = alphabeta(1, bb_1, bb_dir[dir], bits_1, bits_tmp, curr_ply);
+					}
 				}
 			}
 
-			// 0 - north
-			// 1 - east
-			// 2 - west
-			// 3 - south
-			// now check in preferred order which one to take
-			int dir_order[4] = {E, W, N, S};
-			int dir_idx;
+			// now check in  order which one to take
 			utility_piece[piece_idx] = utility_tmp[dir_order[0]];
 			utility_dir[piece_idx] = dir_order[0];
 			for(dir_idx = 1; dir_idx < 4; dir_idx++) {
-				if(utility_piece[piece_idx] > utility_tmp[dir_order[dir_idx]]) {
-					utility_piece[piece_idx] = utility_tmp[dir_order[dir_idx]];
-					utility_dir[piece_idx] = dir_order[dir_idx];
+				dir = dir_order[dir_idx];
+				if(utility_piece[piece_idx] > utility_tmp[dir]) {
+					utility_piece[piece_idx] = utility_tmp[dir];
+					utility_dir[piece_idx] = dir;
 				}
 			}
 		}
 
-		// 0 - 6 piece
-		// now check in preferred order which one to take
-		int piece_order[7] = {0, 1, 2, 3, 4, 5, 6};
-		int order_idx;
+		// now check in order which one to take
 		utility = utility_piece[piece_order[0]];
-		piece_idx = piece_order[0];
-		for(order_idx = 1; order_idx < 7; order_idx++) {
-			if(utility > utility_piece[piece_order[order_idx]]) {
-				utility = utility_piece[piece_order[order_idx]];
-				piece_idx = piece_order[order_idx];
+		piece = piece_order[0];
+		for(piece_idx = 1; piece_idx < 7; piece_idx++) {
+			piece = piece_order[piece_idx];
+			if(utility > utility_piece[piece]) {
+				utility = utility_piece[piece];
+				piece_to_move = piece;
 			}
 		}
-
-		piece_to_move = piece_idx;
-		dir_to_move = utility_dir[piece_to_move];
+		
+		dir_to_move = utility_dir[piece];
 		// if(utility > 1 || utility < -1) {
 		// 	printf("uitl > 1, wut? - %i, %i, %i, %i, %i, %i, %i\n", utility_piece[0], utility_piece[1], utility_piece[2], utility_piece[3], utility_piece[4], utility_piece[5], utility_piece[6]);
 		// 	printf("states tried: %i\n", states_tried);
@@ -525,7 +422,6 @@ int alphabeta(	int turn,
 		// player 1 moves
 		// player 1 is MAX, player 1 wants the max possible utility
 
-
 		// try the 7 possible pieces
 		for(piece_idx = 0; piece_idx < 7; piece_idx++) {
 			uint64_t bits_dir[4];
@@ -533,17 +429,11 @@ int alphabeta(	int turn,
 			int utility_tmp[4] = {-2, -2, -2, -2};
 
 			piece = piece_order[piece_idx];
-
-			//printf("piece: %i\n", piece);
-
 			// try the 4 possible directions
 			for (dir_idx = 0; dir_idx < 4; dir_idx++) {
 				dir = dir_order[dir_idx];
 				bits_dir[dir] = bits_1[piece];
 				bb_dir[dir] = bb_1;
-
-				//printf("dir: %i\n", dir);
-
 
 				if (trydir(dir, &(bits_dir[dir]), &(bb_dir[dir]), bb_2) == 0) {
 					// possible to move this direction
@@ -601,16 +491,11 @@ int alphabeta(	int turn,
 			int utility_tmp[4] = {2, 2, 2, 2};
 
 			piece = piece_order[piece_idx];
-
-			//printf("piece: %i\n", piece);
-
 			// try the 4 possible directions
 			for (dir_idx = 0; dir_idx < 4; dir_idx++) {
 				dir = dir_order[dir_idx];
 				bits_dir[dir] = bits_2[piece_idx];
 				bb_dir[dir] = bb_2;
-
-				//printf("dir: %i\n", dir);
 
 				if (trydir(dir, &(bits_dir[dir]), &(bb_dir[dir]), bb_1) == 0) {
 					// possible to move this direction
