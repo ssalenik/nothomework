@@ -7,7 +7,6 @@
 #include <inttypes.h>
 #include <string.h>
 #include <sys/time.h>
-#include <math.h>
 
 #include "ai.h"
 #include "printstate.h"

@@ -52,7 +52,7 @@ int check_endgame(uint64_t board) {
 }
 
 uint64_t generate_key(uint64_t w, uint64_t b) {
-	return w ^ (b << 15);
+	return w ^ (b << 8);
 }
 
 int ai_turn(uint64_t bb_1,
@@ -67,7 +67,7 @@ int ai_turn(uint64_t bb_1,
 
 	int util = minimax(1, bb_1, bb_2, bits_1, bits_2, 0);
 
-	printf("util: %i\nstates: %llu\npiece to move: %i\ndir to move: %i\n", util, states_visited, piece_to_move, dir_to_move);
+	printf("util: %i\nstates: %llu\ncollisions: %i\npiece to move: %i\ndir to move: %i\n", util, states_visited, collisions, piece_to_move, dir_to_move);
 
 	*states = states_visited;
 	return util;
@@ -309,8 +309,8 @@ int minimax(int turn,
 
 		piece_to_move = piece_idx;
 		dir_to_move = utility_dir[piece_to_move];
-		if(utility  == 1)
-			printf("uitl= 1 - %i, %i, %i, %i, %i, %i, %i\n", utility_piece[0], utility_piece[1], utility_piece[2], utility_piece[3], utility_piece[4], utility_piece[5], utility_piece[6]);
+		// if(utility  == 1)
+		// 	printf("uitl= 1 - %i, %i, %i, %i, %i, %i, %i\n", utility_piece[0], utility_piece[1], utility_piece[2], utility_piece[3], utility_piece[4], utility_piece[5], utility_piece[6]);
 		return utility;
 		
 	} else {
@@ -427,11 +427,11 @@ int minimax(int turn,
 
 		piece_to_move = piece_idx;
 		dir_to_move = utility_dir[piece_to_move];
-		if(utility > 1 || utility < -1) {
-			printf("uitl > 1, wut? - %i, %i, %i, %i, %i, %i, %i\n", utility_piece[0], utility_piece[1], utility_piece[2], utility_piece[3], utility_piece[4], utility_piece[5], utility_piece[6]);
-			printf("states tried: %i\n", states_tried);
-			showstate(bits_1, bits_2);
-		}
+		// if(utility > 1 || utility < -1) {
+		// 	printf("uitl > 1, wut? - %i, %i, %i, %i, %i, %i, %i\n", utility_piece[0], utility_piece[1], utility_piece[2], utility_piece[3], utility_piece[4], utility_piece[5], utility_piece[6]);
+		// 	printf("states tried: %i\n", states_tried);
+		// 	showstate(bits_1, bits_2);
+		// }
 		return utility;
 	}
 }
