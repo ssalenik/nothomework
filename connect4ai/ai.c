@@ -147,14 +147,11 @@ int has_visited_state(uint64_t bitboard_white, uint64_t bitboard_black) {
 		printf("new key\n");
 		#endif
 
-		// list_t *new_list;
-		// new_list = malloc(sizeof(list_t));
-		// new_list->b_white = bitboard_white;
-		// new_list->b_black = bitboard_black;
-		// new_list->next = NULL;
-		// kh_value(h, k) = new_list;
-
-		list_p new_list = (&(list_t){.b_white=bitboard_white, .b_black=bitboard_black, .next=NULL});
+		list_t *new_list;
+		new_list = malloc(sizeof(list_t));
+		new_list->b_white = bitboard_white;
+		new_list->b_black = bitboard_black;
+		new_list->next = NULL;
 		kh_value(h, k) = new_list;
 
 		states_visited++;	//incremente states visited count
@@ -166,12 +163,8 @@ int has_visited_state(uint64_t bitboard_white, uint64_t bitboard_black) {
 		printf("old key, listing visited states:\n");
 		#endif
 
-		// list_t *old_list;
-		// list_t *next_state;
-		// old_list = kh_value(h, k);
-		// next_state = old_list;
-		list_p old_list;
-		list_p next_state;
+		list_t *old_list;
+		list_t *next_state;
 		old_list = kh_value(h, k);
 		next_state = old_list;
 
@@ -201,15 +194,12 @@ int has_visited_state(uint64_t bitboard_white, uint64_t bitboard_black) {
 		printf("did not find same state, adding new state to list\n");
 		#endif
 
-		// list_t *new_state;
-		// new_state = malloc(sizeof(list_t));
-		// new_state->b_white = bitboard_white;
-		// new_state->b_black = bitboard_black;
-		// new_state->next = NULL;
-		// old_list->next = new_state;
-		list_p new_state = (&(list_t){.b_white=bitboard_white, .b_black=bitboard_black, .next=NULL});
+		list_t *new_state;
+		new_state = malloc(sizeof(list_t));
+		new_state->b_white = bitboard_white;
+		new_state->b_black = bitboard_black;
+		new_state->next = NULL;
 		old_list->next = new_state;
-
 
 		collisions++;	// key was the same, but it was a different state
 		states_visited++;	//incremente states visited count
