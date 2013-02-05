@@ -107,18 +107,18 @@ int ai_turn(uint64_t bb_1,
 
 	*states = states_visited;
 
-	for (k = kh_begin(h); k != kh_end(h); ++k) {
-		if (kh_exist(h, k)){
-			// free list
-			list_t *list = kh_value(h, k);
-			list_t *next;
-			while(list != NULL) {
-				next = list->next;
-				free(list);
-				list = next;
-			}
-		}
-	}
+	// for (k = kh_begin(h); k != kh_end(h); ++k) {
+	// 	if (kh_exist(h, k)){
+	// 		// free list
+	// 		list_t *list = kh_value(h, k);
+	// 		list_t *next;
+	// 		while(list != NULL) {
+	// 			next = list->next;
+	// 			free(list);
+	// 			list = next;
+	// 		}
+	// 	}
+	// }
 
 
 	kh_destroy(64, h);
