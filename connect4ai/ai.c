@@ -18,6 +18,7 @@ int alpha, beta;	// the current vals of alpha, beta
 int ply_cutoff; 
 uint64_t states_visited = 0;
 int collisions = 0;
+int deepest_ply = 0;
 
 int piece_to_move;
 int dir_to_move;
@@ -81,9 +82,14 @@ int ai_turn(uint64_t bb_1,
 			int d_cutoff,
 			int* states) {
 	khiter_t k;
+
+	/* initializations */
 	h = kh_init(64);  // allocate a hash table
 	ply_cutoff = d_cutoff;
 	has_visited_state(bb_1, bb_2); // save the initial state
+	collisions = 0;
+	states_visited = 0;
+	deepest_ply = 0;
 
 	// get initial time
     gettimeofday(&tvBegin, NULL);
@@ -107,19 +113,18 @@ int ai_turn(uint64_t bb_1,
 
 	*states = states_visited;
 
-	// for (k = kh_begin(h); k != kh_end(h); ++k) {
-	// 	if (kh_exist(h, k)){
-	// 		// free list
-	// 		list_t *list = kh_value(h, k);
-	// 		list_t *next;
-	// 		while(list != NULL) {
-	// 			next = list->next;
-	// 			free(list);
-	// 			list = next;
-	// 		}
-	// 	}
-	// }
-
+	for (k = kh_begin(h); k != kh_end(h); ++k) {
+		if (kh_exist(h, k)){
+			// free list
+			list_t *list = kh_value(h, k);
+			list_t *next;
+			while(list != NULL) {
+				next = list->next;
+				free(list);
+				list = next;
+			}
+		}
+	}
 
 	kh_destroy(64, h);
 	return util;
