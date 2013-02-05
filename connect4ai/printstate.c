@@ -28,7 +28,6 @@ int bitboard_lookup[56][2] = { \
  */
 int showstate(uint64_t white_bits[], uint64_t black_bits[]) {
 	int i, j;
-	printf("\n");
 	char state_tmp[8][8];
 
 	// copy empty state

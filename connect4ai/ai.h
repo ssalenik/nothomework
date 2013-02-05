@@ -11,12 +11,18 @@
 #include "khash.h"
 #include "printstate.h"
 
+/* ai algo selection */
+typedef enum {minimax_ai, alphabeta_ai, ab_iter_ai, eval1_ai, eval2_ai} ai_t;
+
 typedef enum {white, black} turn_t;
+
+/* directions */
 #define N 0
 #define E 1
 #define W 2
 #define S 3
 
+/* linked list struct */
 typedef struct node {
  	uint64_t b_white;
 	uint64_t b_black;
@@ -33,12 +39,15 @@ int trysouth(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent);
 int tryeast(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent);
 int trywest(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent);
 int check_endgame(uint64_t board);
-int ai_turn(uint64_t bb_1,
-			uint64_t bb_2,
-			uint64_t bits_1[],
-			uint64_t bits_2[],
-			int d_cutoff,
-			int* states);
+int position_lookup(uint64_t piece, int position[]);
+int delete_hashtable();
+int play_ai_turn(	turn_t turn,
+					ai_t ai,
+					uint64_t *bb_1,
+					uint64_t bb_2,
+					uint64_t bits_1[],
+					uint64_t bits_2[],
+					int d_cutoff);
 
 int minimax(int turn,
 			uint64_t bb_1,

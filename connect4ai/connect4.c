@@ -1,6 +1,6 @@
 #include "connect4.h"
 
-#define DEFAULT_START "default.txt"
+#define DEFAULT_START "default.txt"	//used if no input file is specified
 
 
 /* bitboard representation of board
@@ -46,15 +46,7 @@ int printhelp() {
 	return 0;
 }
 
-/* Return 1 if the difference is negative, otherwise 0.  */
-int timeval_subtract(struct timeval *result, struct timeval *t2, struct timeval *t1)
-{
-    long int diff = (t2->tv_usec + 1000000 * t2->tv_sec) - (t1->tv_usec + 1000000 * t1->tv_sec);
-    result->tv_sec = diff / 1000000;
-    result->tv_usec = diff % 1000000;
 
-    return (diff<0);
-}
 
 /* gets input from user */
 int getinput() {
@@ -184,20 +176,58 @@ int main(int argc, char** argv) {
     extern char *optarg;
     extern int optind, optopt;
 
+    ai_t ai = alphabeta_ai; // the default ai, if none is specified
+    int depth_cutoff = 25; 	// the default search depth cut-off
+
+    turn_t ai_turn = white;	// the default first turn is white
+
+    struct timeval tvBegin, tvEnd, tvDiff;	// for time keeping
+
 	/* parse command line args */
-	while ((c = getopt(argc, argv, "wbhf:")) != -1) {
+	while ((c = getopt(argc, argv, "wbh12345d:f:")) != -1) {
         switch(c) {
         case 'w':
-        	//player white
-            printf("player white\n");
+        	//AI white
+        	ai_turn = white;
+            printf("AI white - human black\n");
             break;
         case 'b':
-        	//player black
-            printf("player black\n");
+        	//AI black
+        	ai_turn = black;
+            printf("human white - AI black\n");
+            break;
+        case '1':
+        	// AI 1 - minimax
+        	ai = minimax_ai;
+            break;
+        case '2':
+        	// AI 2 - alpha-beta
+        	ai = alphabeta_ai;
+            break;
+        case '3':
+        	// AI 3 - iterative deepening alpha-beta
+        	ai = ab_iter_ai;
+            break;
+        case '4':
+        	// AI 4 - eval function 1
+        	ai = eval1_ai;
+            break;
+        case '5':
+        	// AI 5 - eval function 2
+        	ai = eval2_ai;
             break;
         case 'h':
         	//print help
         	errflg++;
+       	case 'd':
+        	//depth cutoff
+            depth_cutoff = atoi(optarg);
+            if(depth_cutoff == 0) {
+            	fprintf(stderr,
+                    "depth cut-off must be a non-zero integer\n");
+           		errflg++;
+            }
+            break;
         case 'f':
         	//input file
         	fflg++;
@@ -229,69 +259,28 @@ int main(int argc, char** argv) {
     if(parsefile(ifile) != 0)
     	exit(1);
 
+    // show the loaded state
     printf("starting position:\n");
 	showstate(white_bits, black_bits);
 
-	// turn_t turn = white;
+	// check who starts
+	if(ai_turn == white) {
+		// AI starts
+		printf("\nAI is white, AI starts.  Press any key to start AI turn.");
+		getchar();	// wait for key to be pressed
 
-	// tryeast(&white_bits[6], &bitboard_white, bitboard_black);
-	// showstate();
- //    tryeast(&white_bits[6], &bitboard_white, bitboard_black);
- //    showstate();
+		play_ai_turn(ai_turn, ai, &bitboard_white, bitboard_black, white_bits, black_bits, depth_cutoff);
 
-	// int done = 0;
-	// done = check_endgame(bitboard_white);
+	} else {
+		// human starts, AI is black
+		printf("AI is black, human starts.  Enter the first move to start.");
+		getchar();	// wait for key to be pressed
 
-	struct timeval tvBegin, tvEnd, tvDiff;
+		play_ai_turn(ai_turn, ai, &bitboard_black, bitboard_white, black_bits, white_bits, depth_cutoff);
 
-    
+	}
 
-	int states;
-	int i;
-	for(i = 0; i < 20; i++) {
-		// begin
-    	gettimeofday(&tvBegin, NULL);
-		ai_turn(bitboard_white, bitboard_black, white_bits, black_bits, 30, &states);
-
-		//end
-	    gettimeofday(&tvEnd, NULL);
-	    // diff
-	    timeval_subtract(&tvDiff, &tvEnd, &tvBegin);
-	    printf("%ld.%06ld\n", tvDiff.tv_sec, tvDiff.tv_usec);
-
-	    getchar();
-	}	
-
-	// printf("\n");
-
-	// switch(done) {
-	// case 0:
-	// 	printf("no winner\n");
-	// 	break;
-	// case 1:
-	// 	printf("white wins horizontal\n");
-	// 	break;
-	// case 2:
-	// 	printf("white wins vertical\n");
-	// 	break;
-	// case 3:
-	// 	printf("white wins diagonal /\n");
-	// 	break;
-	// case 4:
-	// 	printf("white wins diagonal \\\n");
-	// 	break;
-	// }
-	// printf("\n");
-
-	// while(!done) {
-	// 	if(turn == white) {
-	// 		printf("white turn:\n");
-
-	// 	} else {
-	// 		printf("black turn:\n");
-	// 	}
-	// }
-
+	getchar();	
 
 	return 0;
 }

@@ -1,6 +1,6 @@
 #include "ai.h"
 
-#define DEBUG 0
+#define DEBUG 2
 
 // borders
 #define BORDER_W 18085043209519168
@@ -10,6 +10,8 @@
 
 KHASH_MAP_INIT_INT64(64, list_t*);
 khash_t(64) *h;
+
+char direction_char[4] = {'N', 'E', 'W', 'S'};
 
 int alpha_max;	// the max possible alpha
 int beta_min;	// the min possible beta
@@ -22,6 +24,8 @@ int deepest_ply = 0;
 
 int piece_to_move;
 int dir_to_move;
+uint64_t new_piece_position;
+uint64_t new_bb;
 
 struct timeval tvBegin, tvEnd, tvDiff;
 
@@ -35,7 +39,17 @@ int check_time()
     // tvDiff.tv_sec = diff / 1000000;
     // tvDiff.tv_usec = diff % 1000000;
 
-    return (diff>=17);
+    return (diff>=19);
+}
+
+/* Return 1 if the difference is negative, otherwise 0.  */
+int timeval_subtract(struct timeval *result, struct timeval *t2, struct timeval *t1)
+{
+    long int diff = (t2->tv_usec + 1000000 * t2->tv_sec) - (t1->tv_usec + 1000000 * t1->tv_sec);
+    result->tv_sec = diff / 1000000;
+    result->tv_usec = diff % 1000000;
+
+    return (diff<0);
 }
 
 /* checks if end-game has been reached
@@ -75,44 +89,95 @@ uint64_t generate_key(uint64_t w, uint64_t b) {
 	return w ^ (b << 8);
 }
 
-int ai_turn(uint64_t bb_1,
-			uint64_t bb_2,
-			uint64_t bits_1[],
-			uint64_t bits_2[],
-			int d_cutoff,
-			int* states) {
-	khiter_t k;
+int play_ai_turn(	turn_t turn,
+					ai_t ai,
+					uint64_t *bb_1,
+					uint64_t bb_2,
+					uint64_t bits_1[],
+					uint64_t bits_2[],
+					int d_cutoff)
+{
 
 	/* initializations */
 	h = kh_init(64);  // allocate a hash table
 	ply_cutoff = d_cutoff;
-	has_visited_state(bb_1, bb_2); // save the initial state
+	has_visited_state(*bb_1, bb_2); // save the initial state
 	collisions = 0;
 	states_visited = 0;
 	deepest_ply = 0;
 
+	int util;
+
 	// get initial time
     gettimeofday(&tvBegin, NULL);
 
-    int util;
+    
+    switch(ai) {
+    case minimax_ai:
+    	/* minimax */
+    	util = minimax(1, *bb_1, bb_2, bits_1, bits_2, 0);
+    	break;
+    case alphabeta_ai:
+    	/* alphabeta */
+		// set the max and min possible values of alpha and beta
+		alpha_max = 1;
+		beta_min = -1;
+		// set the initial values of alpha and beta
+		alpha = beta_min;
+		beta = alpha_max;
+		// perform alpha-beta algo
+		util = alphabeta(1, *bb_1, bb_2, bits_1, bits_2, 0);
+		break;
+	case ab_iter_ai:
+		/* alpha-beta with iterative deepening */
 
-    /* maximin */
-	//util = minimax(1, bb_1, bb_2, bits_1, bits_2, 0);
+		break;
+	case eval1_ai:
 
-	/* alphabeta */
-	// set the max and min possible values of alpha and beta
-	alpha_max = 1;
-	beta_min = -1;
-	// set the initial values of alpha and beta
-	alpha = beta_min;
-	beta = alpha_max;
-	// perform alpha-beta algo
-	util = alphabeta(1, bb_1, bb_2, bits_1, bits_2, 0);
+		break;
+	case eval2_ai:
 
-	printf("util: %i\nstates: %llu\ncollisions: %i\npiece to move: %i\ndir to move: %i\n", util, states_visited, collisions, piece_to_move, dir_to_move);
+		break;
 
-	*states = states_visited;
+    }
 
+    // show the move
+    int pos[2];
+    position_lookup(bits_1[piece_to_move], pos);
+
+    printf("\nmove: %i%i%c\n", pos[0], pos[1], direction_char[dir_to_move]);
+
+    // update board and bits
+    *bb_1 = new_bb;
+    bits_1[piece_to_move] = new_piece_position;
+
+    if(turn == white) {
+    	// AI moved white
+    	showstate(bits_1, bits_2);
+    } else {
+    	// AI moved black
+    	showstate(bits_2, bits_1);
+    }
+
+	//time elapsed
+	gettimeofday(&tvEnd, NULL);
+	timeval_subtract(&tvDiff, &tvEnd, &tvBegin);
+	printf("time elapsed: %ld.%06ld\n", (long int)tvDiff.tv_sec, (long int)tvDiff.tv_usec);
+
+	#if DEBUG == 2
+	printf("util: %i\nstates: %llu\ncollisions: %i\n", util, states_visited, collisions);
+	#endif
+
+	// free memory
+	delete_hashtable();
+
+	return util;
+}
+
+int delete_hashtable() {
+	khiter_t k;
+
+	// iterates through table and frees memory
 	for (k = kh_begin(h); k != kh_end(h); ++k) {
 		if (kh_exist(h, k)){
 			// free list
@@ -127,7 +192,8 @@ int ai_turn(uint64_t bb_1,
 	}
 
 	kh_destroy(64, h);
-	return util;
+
+	return 0;
 }
 
 /* function which checks if the state given has already been visited
@@ -504,6 +570,8 @@ int alphabeta(	int turn,
 				utility = utility_piece[piece];
 				piece_to_move = piece;
 				dir_to_move = utility_dir[piece];
+				new_piece_position = bits_dir[dir_to_move];
+				new_bb = bb_dir[dir_to_move];
 			}
 			// break if we have reached max possible alpha
 			if(curr_alpha == alpha_max)
@@ -595,6 +663,7 @@ int trydir(int dir, uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent) {
 		return trywest(piece, bb_own, bb_oponent);
 		break;
 	}
+	return 1;	// not possible if incompatible dir is specified
 }
 
 /* attempts to move the given piece north one spot
@@ -678,5 +747,129 @@ int tryeast(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent) {
 	*bb_own = *bb_own - *piece;
 	*bb_own = *bb_own | piece_tmp;
 	*piece = piece_tmp;
+	return 0;
+}
+
+/* returns the x,y position */
+int position_lookup(uint64_t piece, int pos[]) {
+	switch(piece){
+	/* row 1 */
+	case 1:
+		pos[0] = 1; pos[1] = 1; break;
+	case 2:
+		pos[0] = 2; pos[1] = 1; break;
+	case 4:
+		pos[0] = 3; pos[1] = 1; break;
+	case 8:
+		pos[0] = 4; pos[1] = 1; break;
+	case 16:
+		pos[0] = 5; pos[1] = 1; break;
+	case 32:
+		pos[0] = 6; pos[1] = 1; break;
+	case 64:
+		pos[0] = 7; pos[1] = 1; break;
+	
+	/* row 2 */
+	case 256:
+		pos[0] = 1; pos[1] = 2; break;
+	case 512:
+		pos[0] = 2; pos[1] = 2; break;
+	case 1024:
+		pos[0] = 3; pos[1] = 2; break;
+	case 2048:
+		pos[0] = 4; pos[1] = 2; break;
+	case 4096:
+		pos[0] = 5; pos[1] = 2; break;
+	case 8182:
+		pos[0] = 6; pos[1] = 2; break;
+	case 1638:
+		pos[0] = 7; pos[1] = 2; break;
+
+	/* row 3 */
+	case 65536:
+		pos[0] = 1; pos[1] = 3; break;
+	case 131072:
+		pos[0] = 2; pos[1] = 3; break;
+	case 262144:
+		pos[0] = 3; pos[1] = 3; break;
+	case 524288:
+		pos[0] = 4; pos[1] = 3; break;
+	case 1048576:
+		pos[0] = 5; pos[1] = 3; break;
+	case 2097152:
+		pos[0] = 6; pos[1] = 3; break;
+	case 4194304:
+		pos[0] = 7; pos[1] = 3; break;
+
+	/* row 4 */
+	case 16777216:
+		pos[0] = 1; pos[1] = 4; break;
+	case 33554432:
+		pos[0] = 2; pos[1] = 4; break;
+	case 67108864:
+		pos[0] = 3; pos[1] = 4; break;
+	case 134217728:
+		pos[0] = 4; pos[1] = 4; break;
+	case 268435456:
+		pos[0] = 5; pos[1] = 4; break;
+	case 536870912:
+		pos[0] = 6; pos[1] = 4; break;
+	case 1073741824:
+		pos[0] = 7; pos[1] = 4; break;
+
+	/* row 5 */
+	case 4294967296:
+		pos[0] = 1; pos[1] = 5; break;
+	case 8589934592:
+		pos[0] = 2; pos[1] = 5; break;
+	case 17179869184:
+		pos[0] = 3; pos[1] = 5; break;
+	case 34359738368:
+		pos[0] = 4; pos[1] = 5; break;
+	case 68719476736:
+		pos[0] = 5; pos[1] = 5; break;
+	case 137438953472:
+		pos[0] = 6; pos[1] = 5; break;
+	case 274877906944:
+		pos[0] = 7; pos[1] = 5; break;
+
+	/* row 6 */
+	case 1099511627776:
+		pos[0] = 1; pos[1] = 6; break;
+	case 2199023255552:
+		pos[0] = 2; pos[1] = 6; break;
+	case 4398046511104:
+		pos[0] = 3; pos[1] = 6; break;
+	case 8796093022208:
+		pos[0] = 4; pos[1] = 6; break;
+	case 17592186044416:
+		pos[0] = 5; pos[1] = 6; break;
+	case 35184372088832:
+		pos[0] = 6; pos[1] = 6; break;
+	case 70368744177664:
+		pos[0] = 7; pos[1] = 6; break;
+
+	/* row 7 */
+	case 281474976710656:
+		pos[0] = 1; pos[1] = 7; break;
+	case 562949953421312:
+		pos[0] = 2; pos[1] = 7; break;
+	case 1125899906842624:
+		pos[0] = 3; pos[1] = 7; break;
+	case 2251799813685248:
+		pos[0] = 4; pos[1] = 7; break;
+	case 4503599627370496:
+		pos[0] = 5; pos[1] = 7; break;
+	case 9007199254740992:
+		pos[0] = 6; pos[1] = 7; break;
+	case 18014398509481984:
+		pos[0] = 7; pos[1] = 7; break;
+
+	default:
+		// not a valid position
+		pos[0] = -1; pos[1] = -1;
+		return 1; break;
+	
+	}
 	return 0;
 }
