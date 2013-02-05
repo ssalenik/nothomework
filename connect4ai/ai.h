@@ -41,6 +41,7 @@ int trywest(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent);
 int check_endgame(uint64_t board);
 int position_lookup(uint64_t piece, int position[]);
 int delete_hashtable();
+int free_hashtable();
 int play_ai_turn(	turn_t turn,
 					ai_t ai,
 					uint64_t *bb_1,
@@ -56,6 +57,8 @@ int minimax(int turn,
 			uint64_t bits_2[],
 			int curr_ply);
 int alphabeta(	int turn,
+				int alpha,
+				int beta,
 				uint64_t bb_1,
 				uint64_t bb_2,
 				uint64_t bits_1[],
