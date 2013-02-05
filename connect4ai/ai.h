@@ -21,7 +21,7 @@ typedef struct node {
  	uint64_t b_white;
 	uint64_t b_black;
 	struct node *next;
-} list_t;
+} list_t, *list_p;
 
 #endif /* AI_H_ */
 

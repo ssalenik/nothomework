@@ -244,17 +244,23 @@ int main(int argc, char** argv) {
 
 	struct timeval tvBegin, tvEnd, tvDiff;
 
-    // begin
-    gettimeofday(&tvBegin, NULL);
+    
 
 	int states;
-	ai_turn(bitboard_white, bitboard_black, white_bits, black_bits, 3, &states);
+	int i;
+	for(i = 0; i < 20; i++) {
+		// begin
+    	gettimeofday(&tvBegin, NULL);
+		ai_turn(bitboard_white, bitboard_black, white_bits, black_bits, 30, &states);
 
-	//end
-    gettimeofday(&tvEnd, NULL);
-    // diff
-    timeval_subtract(&tvDiff, &tvEnd, &tvBegin);
-    printf("%ld.%06ld\n", tvDiff.tv_sec, tvDiff.tv_usec);
+		//end
+	    gettimeofday(&tvEnd, NULL);
+	    // diff
+	    timeval_subtract(&tvDiff, &tvEnd, &tvBegin);
+	    printf("%ld.%06ld\n", tvDiff.tv_sec, tvDiff.tv_usec);
+
+	    getchar();
+	}	
 
 	// printf("\n");
 

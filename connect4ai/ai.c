@@ -34,7 +34,7 @@ int check_time()
     // tvDiff.tv_sec = diff / 1000000;
     // tvDiff.tv_usec = diff % 1000000;
 
-    return (diff>=19);
+    return (diff>=17);
 }
 
 /* checks if end-game has been reached
@@ -80,6 +80,7 @@ int ai_turn(uint64_t bb_1,
 			uint64_t bits_2[],
 			int d_cutoff,
 			int* states) {
+	khiter_t k;
 	h = kh_init(64);  // allocate a hash table
 	ply_cutoff = d_cutoff;
 	has_visited_state(bb_1, bb_2); // save the initial state
@@ -105,6 +106,22 @@ int ai_turn(uint64_t bb_1,
 	printf("util: %i\nstates: %llu\ncollisions: %i\npiece to move: %i\ndir to move: %i\n", util, states_visited, collisions, piece_to_move, dir_to_move);
 
 	*states = states_visited;
+
+	for (k = kh_begin(h); k != kh_end(h); ++k) {
+		if (kh_exist(h, k)){
+			// free list
+			list_t *list = kh_value(h, k);
+			list_t *next;
+			while(list != NULL) {
+				next = list->next;
+				free(list);
+				list = next;
+			}
+		}
+	}
+
+
+	kh_destroy(64, h);
 	return util;
 }
 
@@ -130,11 +147,14 @@ int has_visited_state(uint64_t bitboard_white, uint64_t bitboard_black) {
 		printf("new key\n");
 		#endif
 
-		list_t *new_list;
-		new_list = malloc(sizeof(list_t));
-		new_list->b_white = bitboard_white;
-		new_list->b_black = bitboard_black;
-		new_list->next = NULL;
+		// list_t *new_list;
+		// new_list = malloc(sizeof(list_t));
+		// new_list->b_white = bitboard_white;
+		// new_list->b_black = bitboard_black;
+		// new_list->next = NULL;
+		// kh_value(h, k) = new_list;
+
+		list_p new_list = (&(list_t){.b_white=bitboard_white, .b_black=bitboard_black, .next=NULL});
 		kh_value(h, k) = new_list;
 
 		states_visited++;	//incremente states visited count
@@ -146,8 +166,12 @@ int has_visited_state(uint64_t bitboard_white, uint64_t bitboard_black) {
 		printf("old key, listing visited states:\n");
 		#endif
 
-		list_t *old_list;
-		list_t *next_state;
+		// list_t *old_list;
+		// list_t *next_state;
+		// old_list = kh_value(h, k);
+		// next_state = old_list;
+		list_p old_list;
+		list_p next_state;
 		old_list = kh_value(h, k);
 		next_state = old_list;
 
@@ -177,12 +201,15 @@ int has_visited_state(uint64_t bitboard_white, uint64_t bitboard_black) {
 		printf("did not find same state, adding new state to list\n");
 		#endif
 
-		list_t *new_state;
-		new_state = malloc(sizeof(list_t));
-		new_state->b_white = bitboard_white;
-		new_state->b_black = bitboard_black;
-		new_state->next = NULL;
+		// list_t *new_state;
+		// new_state = malloc(sizeof(list_t));
+		// new_state->b_white = bitboard_white;
+		// new_state->b_black = bitboard_black;
+		// new_state->next = NULL;
+		// old_list->next = new_state;
+		list_p new_state = (&(list_t){.b_white=bitboard_white, .b_black=bitboard_black, .next=NULL});
 		old_list->next = new_state;
+
 
 		collisions++;	// key was the same, but it was a different state
 		states_visited++;	//incremente states visited count
@@ -406,13 +433,13 @@ int alphabeta(	int turn,
 	}
 	// check if we have reached the depth cutoff
 	
-	if (curr_ply == ply_cutoff) {
-		// depth cutoff, and no winner
+	if (curr_ply == ply_cutoff || check_time()) {
+		// depth cutoff or time cutoff, and no winner
 		return 0;
 	}
 	curr_ply++;
 
-	check_time();
+	
 
 	int utility; // the result
 	int utility_piece[7]; // utility of each piece
