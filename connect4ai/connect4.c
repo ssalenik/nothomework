@@ -176,8 +176,8 @@ int main(int argc, char** argv) {
     extern char *optarg;
     extern int optind, optopt;
 
-    ai_t ai = alphabeta_ai; // the default ai, if none is specified
-    int depth_cutoff = 25; 	// the default search depth cut-off
+    ai_t ai = ab_iter_ai; // the default ai, if none is specified
+    int depth_cutoff = 10; 	// the default search depth cut-off
 
     turn_t ai_turn = white;	// the default first turn is white
 
@@ -263,21 +263,149 @@ int main(int argc, char** argv) {
     printf("starting position:\n");
 	showstate(white_bits, black_bits);
 
+	int result = 0;
+
 	// check who starts
 	if(ai_turn == white) {
 		// AI starts
 		printf("\nAI is white, AI starts.  Press any key to start AI turn.");
-		getchar();	// wait for key to be pressed
+		
 
-		play_ai_turn(ai_turn, ai, &bitboard_white, bitboard_black, white_bits, black_bits, depth_cutoff);
+		while(result != INT_MIN || result != INT_MAX) {
+			getchar();	// wait for key to be pressed
+			result = play_ai_turn(ai_turn, ai, &bitboard_white, bitboard_black, white_bits, black_bits, depth_cutoff);
+
+			int bytes_read;
+	  		int nbytes = 5;
+	  		char *user_input = (char *) malloc (6);
+	  		int inputerr = 1;
+	  		int user_x, user_y, user_dir;
+
+	  		printf("\nYour turn to move black:\n");
+
+	  		while(inputerr != 0) {
+	  			inputerr = 0;
+		  		bytes_read = getline(&user_input, &nbytes, stdin);
+		  		if(bytes_read == -1)
+		  			inputerr++;
+		  		user_x = (int)user_input[0] - 48;
+		  		if(user_x < 1 || user_x > 7)
+		  			inputerr++;
+		  		user_y = (int)user_input[1] - 48;
+		  		if(user_y < 1 || user_y > 7)
+		  			inputerr++;
+		  		switch(user_input[2]) {
+		  		case 'N':
+		  			user_dir = N;
+		  			break;
+		  		case 'E':
+		  			user_dir = E;
+		  			break;
+		  		case 'W':
+		  			user_dir = W;
+		  			break;
+		  		case 'S':
+		  			user_dir = S;
+		  			break;
+		  		default:
+		  			inputerr++;
+		  		}
+		  		if(inputerr) {
+		  			printf("\nerror in input, try again:\n");
+		  		} else {
+		  			user_x = user_x - 1;
+					user_y = user_y - 1;
+					int bit_number = 8*user_y + user_x;
+					uint64_t piece = (uint64_t)1 << bit_number;
+					// make sure its a valid piece
+					if(piece & bitboard_black) {
+						int i = 0;
+						while(piece != black_bits[i]){
+							i++;
+						}
+		  				inputerr = trydir(user_dir, &piece, &bitboard_black, bitboard_white);
+		  				if(inputerr == 0) {
+		  					black_bits[i] = piece;
+		  				}
+		  			}
+		  			if(inputerr)
+		  				printf("invalid move, try again:\n");
+		  		}
+		  	}
+
+		  	showstate(white_bits, black_bits);
+		  	printf("\nAI turn\n");
+		}
 
 	} else {
 		// human starts, AI is black
 		printf("AI is black, human starts.  Enter the first move to start.");
-		getchar();	// wait for key to be pressed
 
-		play_ai_turn(ai_turn, ai, &bitboard_black, bitboard_white, black_bits, white_bits, depth_cutoff);
+		while(result != INT_MIN || result != INT_MAX) {
 
+			int bytes_read;
+	  		int nbytes = 5;
+	  		char *user_input = (char *) malloc (nbytes + 1);
+
+	  		int inputerr = 1;
+	  		int user_x, user_y, user_dir;
+
+	  		printf("\nYour turn to move white:\n");
+
+	  		while(inputerr != 0) {
+	  			inputerr = 0;
+		  		bytes_read = getline(&user_input, &nbytes, stdin);
+		  		if(bytes_read == -1)
+		  			inputerr++;
+		  		user_x = (int)user_input[0] - 48;
+		  		if(user_x < 1 || user_x > 7)
+		  			inputerr++;
+		  		user_y = (int)user_input[1] - 48;
+		  		if(user_y < 1 || user_y > 7)
+		  			inputerr++;
+		  		switch(user_input[2]) {
+		  		case 'N':
+		  			user_dir = N;
+		  			break;
+		  		case 'E':
+		  			user_dir = E;
+		  			break;
+		  		case 'W':
+		  			user_dir = W;
+		  			break;
+		  		case 'S':
+		  			user_dir = S;
+		  			break;
+		  		default:
+		  			inputerr++;
+		  		}
+		  		if(inputerr) {
+		  			printf("\nerror in input, try again:\n");
+		  		} else {
+		  			user_x = user_x - 1;
+					user_y = user_y - 1;
+					int bit_number = 8*user_y + user_x;
+					uint64_t piece = (uint64_t)1 << bit_number;
+					// make sure its a valid piece
+					if(piece & bitboard_white) {
+						int i = 0;
+						while(piece != white_bits[i]){
+							i++;
+						}
+		  				inputerr = trydir(user_dir, &piece, &bitboard_white, bitboard_black);
+		  				if(inputerr == 0) {
+		  					white_bits[i] = piece;
+		  				}
+		  			}
+		  			if(inputerr)
+		  				printf("invalid move, try again:\n");
+		  		}
+		  	}
+		}
+		showstate(white_bits, black_bits);
+		getchar();
+		printf("\nAI turn\n");
+		result = play_ai_turn(ai_turn, ai, &bitboard_black, bitboard_white, black_bits, white_bits, depth_cutoff);
 	}
 
 	getchar();	

@@ -119,6 +119,8 @@ int play_ai_turn(	turn_t turn,
     switch(ai) {
     case minimax_ai:
     	/* minimax */
+    	alpha_max = 1;
+    	beta_min = -1;
 		ply_cutoff = d_cutoff;
     	ply_cutoff = d_cutoff;
     	util = minimax(1, *bb_1, bb_2, bits_1, bits_2, 0);
@@ -196,7 +198,14 @@ int play_ai_turn(	turn_t turn,
 	// free memory
 	delete_hashtable();
 
-	return util;
+	if(util == alpha_max) {
+		return INT_MAX;
+	} else if (util == beta_min) {
+		return INT_MIN;
+	} else {
+		return util;
+	}
+
 }
 
 int delete_hashtable() {
