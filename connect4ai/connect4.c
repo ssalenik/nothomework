@@ -401,11 +401,12 @@ int main(int argc, char** argv) {
 		  				printf("invalid move, try again:\n");
 		  		}
 		  	}
+		  	showstate(white_bits, black_bits);
+			getchar();
+			printf("\nAI turn\n");
+			result = play_ai_turn(ai_turn, ai, &bitboard_black, bitboard_white, black_bits, white_bits, depth_cutoff);
 		}
-		showstate(white_bits, black_bits);
-		getchar();
-		printf("\nAI turn\n");
-		result = play_ai_turn(ai_turn, ai, &bitboard_black, bitboard_white, black_bits, white_bits, depth_cutoff);
+		
 	}
 
 	getchar();	
