@@ -176,8 +176,8 @@ int main(int argc, char** argv) {
     extern char *optarg;
     extern int optind, optopt;
 
-    ai_t ai = ab_iter_ai; // the default ai, if none is specified
-    int depth_cutoff = 10; 	// the default search depth cut-off
+    ai_t ai = eval1_ai; // the default ai, if none is specified
+    int depth_cutoff = 30; 	// the default search depth cut-off
 
     turn_t ai_turn = white;	// the default first turn is white
 
