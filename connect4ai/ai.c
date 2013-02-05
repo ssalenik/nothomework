@@ -11,8 +11,9 @@
 KHASH_MAP_INIT_INT64(64, list_t*);
 khash_t(64) *h;
 
-int alpha_min;
-int beta_max;
+int alpha_max;	// the max possible alpha
+int beta_min;	// the min possible beta
+int alpha, beta;	// the current vals of alpha, beta
 
 int ply_cutoff; 
 uint64_t states_visited = 0;
@@ -87,15 +88,19 @@ int ai_turn(uint64_t bb_1,
     gettimeofday(&tvBegin, NULL);
 
     int util;
-    int alpha;
-	util = minimax(1, bb_1, bb_2, bits_1, bits_2, 0);
 
-	//alphabeta
-	alpha_min = -1;
-	beta_max = 1;
-	// alpha = alphabeta(1, bb_1, bb_2, bits_1, bits_2, 0);
+    /* maximin */
+	//util = minimax(1, bb_1, bb_2, bits_1, bits_2, 0);
 
-	// util = alpha;
+	/* alphabeta */
+	// set the max and min possible values of alpha and beta
+	alpha_max = 1;
+	beta_min = -1;
+	// set the initial values of alpha and beta
+	alpha = beta_min;
+	beta = alpha_max;
+	// perform alpha-beta algo
+	util = alphabeta(1, bb_1, bb_2, bits_1, bits_2, 0);
 
 	printf("util: %i\nstates: %llu\ncollisions: %i\npiece to move: %i\ndir to move: %i\n", util, states_visited, collisions, piece_to_move, dir_to_move);
 
@@ -265,7 +270,7 @@ int minimax(int turn,
 						memcpy(bits_tmp, bits_1, 7*sizeof(uint64_t));
 						bits_tmp[piece] = bits_dir[dir];
 						// perform minimax on this move
-						utility_tmp[dir] = alphabeta(2, bb_dir[dir], bb_2, bits_tmp, bits_2, curr_ply);
+						utility_tmp[dir] = minimax(2, bb_dir[dir], bb_2, bits_tmp, bits_2, curr_ply);
 					}
 				}
 			}
@@ -327,7 +332,7 @@ int minimax(int turn,
 						memcpy(bits_tmp, bits_2, 7*sizeof(uint64_t));
 						bits_tmp[piece_idx] = bits_dir[dir];
 						// perform minimax on this move
-						utility_tmp[dir] = alphabeta(1, bb_1, bb_dir[dir], bits_1, bits_tmp, curr_ply);
+						utility_tmp[dir] = minimax(1, bb_1, bb_dir[dir], bits_1, bits_tmp, curr_ply);
 					}
 				}
 			}
@@ -410,7 +415,7 @@ int alphabeta(	int turn,
 	check_time();
 
 	int utility; // the result
-	int utility_piece[7] = {0, 0, 0, 0, 0, 0, 0}; // utility of each piece
+	int utility_piece[7]; // utility of each piece
 	int utility_dir[7]; // direction of the utility picked
 	int piece_idx;
 	int dir_idx;
@@ -418,17 +423,24 @@ int alphabeta(	int turn,
 	int dir;
 	int piece_order[7] = {0, 1, 2, 3, 4, 5, 6};
 	int piece;
+	int curr_alpha = beta_min;
+	int curr_beta = alpha_max;
 	if(turn == 1){
 		// player 1 moves
 		// player 1 is MAX, player 1 wants the max possible utility
+		utility = -2;
 
 		// try the 7 possible pieces
 		for(piece_idx = 0; piece_idx < 7; piece_idx++) {
 			uint64_t bits_dir[4];
 			uint64_t bb_dir[4];			
-			int utility_tmp[4] = {-2, -2, -2, -2};
-
+			int utility_tmp[4];
 			piece = piece_order[piece_idx];
+			utility_piece[piece] = -2; //initial
+
+			//printf("util: %i\tutil_piece: %i\n", utility, utility_piece[piece]);
+
+			
 			// try the 4 possible directions
 			for (dir_idx = 0; dir_idx < 4; dir_idx++) {
 				dir = dir_order[dir_idx];
@@ -446,35 +458,36 @@ int alphabeta(	int turn,
 						memcpy(bits_tmp, bits_1, 7*sizeof(uint64_t));
 						bits_tmp[piece] = bits_dir[dir];
 						// perform minimax on this move
-						utility_tmp[dir] = alphabeta(2, bb_dir[dir], bb_2, bits_tmp, bits_2, curr_ply);
+						curr_alpha = utility_tmp[dir] = alphabeta(2, bb_dir[dir], bb_2, bits_tmp, bits_2, curr_ply);
+						// check alpha value
+						if(curr_alpha > alpha) {
+							// set as current alpha
+							alpha = curr_alpha;
+						}
+
 					}
-				}
-			}
 
-			// now check in  order which one to take
-			utility_piece[piece] = utility_tmp[dir_order[0]];
-			utility_dir[piece] = dir_order[0];
-			for(dir_idx = 1; dir_idx < 4; dir_idx++) {
-				dir = dir_order[dir_idx];
-				if(utility_piece[piece] < utility_tmp[dir]) {
-					utility_piece[piece] = utility_tmp[dir];
-					utility_dir[piece] = dir;
+					if(utility_piece[piece] < utility_tmp[dir]) {
+						utility_piece[piece] = utility_tmp[dir];
+						utility_dir[piece] = dir;
+					}
+					
 				}
+				// break if we have reached max possible alpha
+				if(curr_alpha == alpha_max)
+					break;
 			}
-		}
-
-		// now check in order which one to take
-		utility = utility_piece[piece_order[0]];
-		piece = piece_order[0];
-		for(piece_idx = 1; piece_idx < 7; piece_idx++) {
-			piece = piece_order[piece_idx];
 			if(utility < utility_piece[piece]) {
+
 				utility = utility_piece[piece];
 				piece_to_move = piece;
+				dir_to_move = utility_dir[piece];
 			}
+			// break if we have reached max possible alpha
+			if(curr_alpha == alpha_max)
+				break;
 		}
-
-		dir_to_move = utility_dir[piece];
+		
 		// if(utility  == 1)
 		// 	printf("uitl= 1 - %i, %i, %i, %i, %i, %i, %i\n", utility_piece[0], utility_piece[1], utility_piece[2], utility_piece[3], utility_piece[4], utility_piece[5], utility_piece[6]);
 		return utility;
@@ -482,6 +495,7 @@ int alphabeta(	int turn,
 	} else {
 		// player 2 moves
 		// player 2 is MIN, player 2 wants the min possible utility
+		utility = 2;
 
 		// try the 7 possible pieces
 		int states_tried = 0;
@@ -489,8 +503,11 @@ int alphabeta(	int turn,
 			uint64_t bits_dir[4];
 			uint64_t bb_dir[4];			
 			int utility_tmp[4] = {2, 2, 2, 2};
-
 			piece = piece_order[piece_idx];
+
+			utility_piece[piece] = 2; //initial
+
+			
 			// try the 4 possible directions
 			for (dir_idx = 0; dir_idx < 4; dir_idx++) {
 				dir = dir_order[dir_idx];
@@ -508,40 +525,35 @@ int alphabeta(	int turn,
 						memcpy(bits_tmp, bits_2, 7*sizeof(uint64_t));
 						bits_tmp[piece_idx] = bits_dir[dir];
 						// perform minimax on this move
-						utility_tmp[dir] = alphabeta(1, bb_1, bb_dir[dir], bits_1, bits_tmp, curr_ply);
+						curr_beta = utility_tmp[dir] = alphabeta(1, bb_1, bb_dir[dir], bits_1, bits_tmp, curr_ply);
+						// check beta value
+						if(curr_beta < beta) {
+							// set as current beta
+							beta = curr_beta;
+						}
 					}
-				}
-			}
 
-			// now check in  order which one to take
-			utility_piece[piece_idx] = utility_tmp[dir_order[0]];
-			utility_dir[piece_idx] = dir_order[0];
-			for(dir_idx = 1; dir_idx < 4; dir_idx++) {
-				dir = dir_order[dir_idx];
-				if(utility_piece[piece_idx] > utility_tmp[dir]) {
-					utility_piece[piece_idx] = utility_tmp[dir];
-					utility_dir[piece_idx] = dir;
+					if(utility_piece[piece] > utility_tmp[dir]) {
+						utility_piece[piece] = utility_tmp[dir];
+						//utility_dir[piece] = dir;
+					}
+					
 				}
+				// break if we have reached min possible beta
+				// or if beta is lower than alpha
+				if(curr_beta == beta_min || curr_beta < alpha)
+					break;
 			}
-		}
-
-		// now check in order which one to take
-		utility = utility_piece[piece_order[0]];
-		piece = piece_order[0];
-		for(piece_idx = 1; piece_idx < 7; piece_idx++) {
-			piece = piece_order[piece_idx];
 			if(utility > utility_piece[piece]) {
 				utility = utility_piece[piece];
-				piece_to_move = piece;
+				//piece_to_move = piece;
+				//dir_to_move = utility_dir[piece];
 			}
+			// break if we have reached min possible beta
+			// or if beta is lower than alpha
+			if(curr_beta == beta_min || curr_beta < alpha)
+				break;
 		}
-		
-		dir_to_move = utility_dir[piece];
-		// if(utility > 1 || utility < -1) {
-		// 	printf("uitl > 1, wut? - %i, %i, %i, %i, %i, %i, %i\n", utility_piece[0], utility_piece[1], utility_piece[2], utility_piece[3], utility_piece[4], utility_piece[5], utility_piece[6]);
-		// 	printf("states tried: %i\n", states_tried);
-		// 	showstate(bits_1, bits_2);
-		// }
 		return utility;
 	}
 }
