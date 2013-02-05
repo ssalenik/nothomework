@@ -1024,7 +1024,7 @@ int position_lookup(uint64_t piece, int pos[]) {
 		pos[0] = 5; pos[1] = 2; break;
 	case 8182:
 		pos[0] = 6; pos[1] = 2; break;
-	case 1638:
+	case 16364:
 		pos[0] = 7; pos[1] = 2; break;
 
 	/* row 3 */
