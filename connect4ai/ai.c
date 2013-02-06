@@ -105,7 +105,9 @@ int play_ai_turn(	turn_t turn,
 
 	/* initializations */
 	h = kh_init(64);  // allocate a hash table
-	has_visited_state(*bb_1, bb_2); // save the initial state
+	int* value_p;
+	int* set_p;
+	has_visited_state(*bb_1, bb_2, &set_p, &value_p); // save the initial state
 	collisions = 0;
 	states_visited = 0;
 	deepest_ply = 0;
@@ -124,6 +126,8 @@ int play_ai_turn(	turn_t turn,
 		ply_cutoff = d_cutoff;
     	ply_cutoff = d_cutoff;
     	util = minimax(1, *bb_1, bb_2, bits_1, bits_2, 0);
+    	states_visited = states_visited_curr_iter;
+   		deepest_ply = deepest_ply_curr_iter;
     	break;
     case alphabeta_ai:
     	/* alphabeta */
@@ -133,6 +137,8 @@ int play_ai_turn(	turn_t turn,
 		beta_min = -1;
 		// perform alpha-beta algo
 		util = alphabeta(1, beta_min, alpha_max, *bb_1, bb_2, bits_1, bits_2, 0);
+		states_visited = states_visited_curr_iter;
+   		deepest_ply = deepest_ply_curr_iter;
 		break;
 	case ab_iter_ai:
 		/* alpha-beta with iterative deepening */
@@ -146,7 +152,7 @@ int play_ai_turn(	turn_t turn,
 			deepest_ply_curr_iter = 0;
 			if(ply_cutoff != 1) {
 				free_hashtable(); //free memory except the first run
-				has_visited_state(*bb_1, bb_2); // save the initial state
+				has_visited_state(*bb_1, bb_2, &set_p, &value_p); // save the initial state
 			}
 			util = alphabeta(1, beta_min, alpha_max, *bb_1, bb_2, bits_1, bits_2, 0);
 			if(deepest_ply_curr_iter > deepest_ply)
@@ -168,7 +174,7 @@ int play_ai_turn(	turn_t turn,
 			deepest_ply_curr_iter = 0;
 			if(ply_cutoff != 1) {
 				free_hashtable(); //free memory except the first run
-				has_visited_state(*bb_1, bb_2); // save the initial state
+				has_visited_state(*bb_1, bb_2, &set_p, &value_p); // save the initial state
 			}
 			util = eval1(1, beta_min, alpha_max, *bb_1, bb_2, bits_1, bits_2, 0);
 			if(deepest_ply_curr_iter > deepest_ply)
@@ -279,13 +285,15 @@ int free_hashtable() {
  *
  * @return - 1 if new, 0 if visited already
  */
-int has_visited_state(uint64_t bitboard_white, uint64_t bitboard_black) {
+int has_visited_state(uint64_t bitboard_white, uint64_t bitboard_black, int** set_p, int** value_p) {
 	int ret;
 	khiter_t k;
 
 	uint64_t key = generate_key(bitboard_white, bitboard_black);
 
 	k = kh_put(64, h, key, &ret);
+
+	int has_visited;
 
 	// if ret != 0, its a new key
 	if(ret) {
@@ -299,11 +307,18 @@ int has_visited_state(uint64_t bitboard_white, uint64_t bitboard_black) {
 		new_list = malloc(sizeof(list_t));
 		new_list->b_white = bitboard_white;
 		new_list->b_black = bitboard_black;
+		new_list->set = 0;  // not yet found
+		new_list->value = 0;	// arbitrary
 		new_list->next = NULL;
 		kh_value(h, k) = new_list;
 
+		*set_p = &(new_list->set);
+		*value_p = &(new_list->value);
+
 		states_visited_curr_iter++;	//incremente states visited count
-		return 1;
+		
+		has_visited = 1;
+		//return 1;
 
 	} else {
 		// key already exists, check the state
@@ -316,18 +331,25 @@ int has_visited_state(uint64_t bitboard_white, uint64_t bitboard_black) {
 		old_list = kh_value(h, k);
 		next_state = old_list;
 
-		while(next_state != NULL) {
+		has_visited = 1;
+
+		while(next_state != NULL && has_visited) {
 			#if DEBUG == 1
 			printf("w: %llu\tb: %llu\n", old_list->b_white, old_list->b_black);
 			#endif
 
 			if( old_list->b_white == bitboard_white && old_list->b_black == bitboard_black) {
 				// same state
-				#if DEBUG == 1
-				printf("found same state\n");
-				#endif
+				//#if DEBUG == 1
+				
+				//#endif
 
-				return 0;
+				*set_p = &(old_list->set);
+				*value_p = &(old_list->value);
+
+				has_visited = 0;
+				//printf("found same state: %i\n", has_visited);
+				//return a;
 			} else {
 				next_state = old_list->next;
 				if(next_state != NULL) {
@@ -335,24 +357,39 @@ int has_visited_state(uint64_t bitboard_white, uint64_t bitboard_black) {
 				}
 			}
 		}
-		// state was not found, add it to list
-		// create linked list node to do so
 
-		#if DEBUG == 1
-		printf("did not find same state, adding new state to list\n");
-		#endif
+		if(has_visited) {
+			// state was not found, add it to list
+			// create linked list node to do so
 
-		list_t *new_state;
-		new_state = malloc(sizeof(list_t));
-		new_state->b_white = bitboard_white;
-		new_state->b_black = bitboard_black;
-		new_state->next = NULL;
-		old_list->next = new_state;
+			#if DEBUG == 1
+			printf("did not find same state, adding new state to list\n");
+			#endif
 
-		collisions++;	// key was the same, but it was a different state
-		states_visited_curr_iter++;	//incremente states visited count
-		return 1;
+			list_t *new_state;
+			new_state = malloc(sizeof(list_t));
+			new_state->b_white = bitboard_white;
+			new_state->b_black = bitboard_black;
+			new_state->set = 0;  // not yet found
+			new_state->value = 0;	// arbitrary
+			new_state->next = NULL;
+			old_list->next = new_state;
+
+			*set_p = &(new_state->set);
+			*value_p = &(new_state->value);
+
+			collisions++;	// key was the same, but it was a different state
+			states_visited_curr_iter++;	//incremente states visited count
+			
+			has_visited = 1;	// just to make sure
+			//return 1;
+
+		}
 	}
+
+	printf("returning: %i", has_visited);
+
+	return has_visited;
 
 }
 
@@ -396,6 +433,8 @@ int minimax(int turn,
 		return 0;
 	}
 	curr_ply++;
+	if(curr_ply > deepest_ply_curr_iter)
+		deepest_ply_curr_iter = curr_ply;
 
 	check_time();
 
@@ -428,9 +467,14 @@ int minimax(int turn,
 
 				if (trydir(dir, &(bits_dir[dir]), &(bb_dir[dir]), bb_2) == 0) {
 					// possible to move this direction
-					utility_tmp[dir] = 0; // set to 0, as it is a possible state
+					//utility_tmp[dir] = 0; // set to 0, as it is a possible state
 					// check if state has been visited
-					if(has_visited_state(bb_dir[dir], bb_2) == 1) {
+					int* set_p;
+					int* value_p;
+					printf("has visited? ");
+					int visited = has_visited_state(bb_dir[dir], bb_2, &set_p, &value_p);
+					printf(" reading: %i\n", visited);
+					if( visited == 1) {
 						// new state!
 						// need a copy of the modified board for each try
 						uint64_t bits_tmp[7];
@@ -438,31 +482,39 @@ int minimax(int turn,
 						bits_tmp[piece] = bits_dir[dir];
 						// perform minimax on this move
 						utility_tmp[dir] = minimax(2, bb_dir[dir], bb_2, bits_tmp, bits_2, curr_ply);
+						// store the eval of this state and mark it as set
+						*value_p = utility_tmp[dir];
+						*set_p = 1;
+					} else if (visited == 0) {
+						// state has alreayd been visited
+						// check if the value has been set
+						// if not, its a loop, set val to 0
+						printf("aha\n");
+						printf("set: %i\n", *set_p);
+
+						if(*set_p) {
+							utility_tmp[dir] = *value_p;
+							//if(*value_p == 1)
+								printf("previously set: %i\n", utility);
+						} else {
+							utility_tmp[dir] = 0;  // because a loop is effectively a draw
+						}
 					}
+					if(utility_tmp[dir] > utility) {
 
-					if(utility_piece[piece] < utility_tmp[dir]) {
-						utility_piece[piece] = utility_tmp[dir];
-						utility_dir[piece] = dir;
-					}	
+						utility = utility_tmp[dir];
+						// if(utility == 1)
+						// 	printf("util: %i\n", utility);
+						if(curr_ply == 1) {
+							// make sure we only set the new way to go if this iteration had time to go deeper
+							piece_to_move = piece;
+							dir_to_move = dir;
+							new_piece_position = bits_dir[dir];
+							new_bb = bb_dir[dir];
+						}
+					}
 				}
 			}
-			if(utility < utility_piece[piece]) {
-
-				utility = utility_piece[piece];
-
-				if(curr_ply == 1) {
-					piece_to_move = piece;
-					dir_to_move = utility_dir[piece];
-					new_piece_position = bits_dir[dir_to_move];
-					new_bb = bb_dir[dir_to_move];
-				}
-				if(curr_ply == 1)
-					printf("util: %i, piece: %i, dir: %i\n", utility, piece, dir_to_move);
-			}
-		}
-		if(curr_ply == 1) {
-			printf("uitl - %i, %i, %i, %i, %i, %i, %i\n", utility_piece[0], utility_piece[1], utility_piece[2], utility_piece[3], utility_piece[4], utility_piece[5], utility_piece[6]);
-			printf("util: %i, piece: %i, dir: %i\n", utility, piece, dir_to_move);
 		}
 		return utility;
 		
@@ -489,28 +541,35 @@ int minimax(int turn,
 
 				if (trydir(dir, &(bits_dir[dir]), &(bb_dir[dir]), bb_1) == 0) {
 					// possible to move this direction
-					utility_tmp[dir] = 0; // set to 0, as it is a possible state
+					//utility_tmp[dir] = 0; // set to 0, as it is a possible state
 					// check if state has been visited
-					if(has_visited_state(bb_1, bb_dir[dir]) == 1) {
+					int* set_p;
+					int* value_p;
+					if(has_visited_state(bb_dir[dir], bb_2, &set_p, &value_p) == 1) {
 						// new state!
 						// need a copy of the modified board for each try
 						uint64_t bits_tmp[7];
-						memcpy(bits_tmp, bits_2, 7*sizeof(uint64_t));
-						bits_tmp[piece_idx] = bits_dir[dir];
+						memcpy(bits_tmp, bits_1, 7*sizeof(uint64_t));
+						bits_tmp[piece] = bits_dir[dir];
 						// perform minimax on this move
 						utility_tmp[dir] = minimax(1, bb_1, bb_dir[dir], bits_1, bits_tmp, curr_ply);
+						// store the eval of this state and mark it as set
+						*value_p = utility_tmp[dir];
+						*set_p = 1;
+					} else {
+						// state has alreayd been visited
+						// check if the value has been set
+						// if not, its a loop, set val to 0
+						if(*set_p) {
+							utility_tmp[dir] = *value_p;
+						} else {
+							utility_tmp[dir] = 0;  // because a loop is effectively a draw
+						}
 					}
-					if(utility_piece[piece] > utility_tmp[dir]) {
-						utility_piece[piece] = utility_tmp[dir];
-						//utility_dir[piece] = dir;
+					if(utility_tmp[dir] < utility) {
+						utility = utility_tmp[dir];
 					}
-					
 				}
-			}
-			if(utility > utility_piece[piece]) {
-				utility = utility_piece[piece];
-				//piece_to_move = piece;
-				//dir_to_move = utility_dir[piece];
 			}
 		}
 		// if(utility > 1 || utility < -1) {
@@ -591,11 +650,17 @@ int alphabeta(	int turn,
 				bits_dir[dir] = bits_1[piece];
 				bb_dir[dir] = bb_1;
 
+
+
 				if (trydir(dir, &(bits_dir[dir]), &(bb_dir[dir]), bb_2) == 0) {
 					// possible to move this direction
-					alpha_tmp[dir] = 0; // set to 0, as it is a possible state
+					//alpha_tmp[dir] = 0; // set to 0, as it is a possible state
 					// check if state has been visited
-					if(has_visited_state(bb_dir[dir], bb_2) == 1) {
+
+					// check if state has been visited
+					int* set_p;
+					int* value_p;
+					if(has_visited_state(bb_dir[dir], bb_2, &set_p, &value_p) == 1) {
 						// new state!
 						// need a copy of the modified board for each try
 						uint64_t bits_tmp[7];
@@ -603,21 +668,32 @@ int alphabeta(	int turn,
 						bits_tmp[piece] = bits_dir[dir];
 						// perform minimax on this move
 						alpha_tmp[dir] = alphabeta(2, alpha, beta, bb_dir[dir], bb_2, bits_tmp, bits_2, curr_ply);
-						
-						// check alpha value
-						if(alpha_tmp[dir] > alpha) {
-							// set as current alpha
-							alpha = alpha_tmp[dir];
-
-							if(curr_ply == 1 && deepest_ply_curr_iter > deepest_ply) {
-								// make sure we only set the new way to go if this iteration had time to go deeper
-								piece_to_move = piece;
-								dir_to_move = dir;
-								new_piece_position = bits_dir[dir];
-								new_bb = bb_dir[dir];
-							}
+						// store the eval of this state and mark it as set
+						*value_p = alpha_tmp[dir];
+						*set_p = 1;
+					} else {
+						// state has alreayd been visited
+						// check if the value has been set
+						// if not, its a loop, set val to 0
+						if(set_p) {
+							alpha_tmp[dir] = *value_p;
+						} else {
+							alpha_tmp[dir] = 0;  // because a loop is effectively a draw
 						}
 					}	
+					// check alpha value
+					if(alpha_tmp[dir] > alpha) {
+						// set as current alpha
+						alpha = alpha_tmp[dir];
+
+						if(curr_ply == 1 && deepest_ply_curr_iter > deepest_ply) {
+							// make sure we only set the new way to go if this iteration had time to go deeper
+							piece_to_move = piece;
+							dir_to_move = dir;
+							new_piece_position = bits_dir[dir];
+							new_bb = bb_dir[dir];
+						}
+					}
 				}				
 				// break if we have reached max possible alpha
 				// or if beta is less than or qual to alpha
@@ -655,22 +731,36 @@ int alphabeta(	int turn,
 
 				if (trydir(dir, &(bits_dir[dir]), &(bb_dir[dir]), bb_1) == 0) {
 					// possible to move this direction
-					beta_tmp[dir] = 0; // set to 0, as it is a possible state
+					//beta_tmp[dir] = 0; // set to 0, as it is a possible state
 					// check if state has been visited
-					if(has_visited_state(bb_1, bb_dir[dir]) == 1) {
+					int* set_p;
+					int* value_p;
+					if(has_visited_state(bb_dir[dir], bb_2, &set_p, &value_p) == 1) {
 						// new state!
 						// need a copy of the modified board for each try
 						uint64_t bits_tmp[7];
-						memcpy(bits_tmp, bits_2, 7*sizeof(uint64_t));
-						bits_tmp[piece_idx] = bits_dir[dir];
+						memcpy(bits_tmp, bits_1, 7*sizeof(uint64_t));
+						bits_tmp[piece] = bits_dir[dir];
 						// perform minimax on this move
 						beta_tmp[dir] = alphabeta(1, alpha, beta, bb_1, bb_dir[dir], bits_1, bits_tmp, curr_ply);
-						// check beta value
-						if(beta_tmp[dir] < beta) {
-							// set as current beta
-							beta = beta_tmp[dir];
+						// store the eval of this state and mark it as set
+						*value_p = beta_tmp[dir];
+						*set_p = 1;
+					} else {
+						// state has alreayd been visited
+						// check if the value has been set
+						// if not, its a loop, set val to 0
+						if(set_p) {
+							beta_tmp[dir] = *value_p;
+						} else {
+							beta_tmp[dir] = 0;  // because a loop is effectively a draw
 						}
 					}
+					// check beta value
+					if(beta_tmp[dir] < beta) {
+						// set as current beta
+						beta = beta_tmp[dir];
+					}					
 				}
 				// break if we have reached min possible beta
 				// or if beta is less than or qual to alpha
@@ -794,11 +884,17 @@ int eval1(	int turn,
 				bits_dir[dir] = bits_1[piece];
 				bb_dir[dir] = bb_1;
 
+
+
 				if (trydir(dir, &(bits_dir[dir]), &(bb_dir[dir]), bb_2) == 0) {
 					// possible to move this direction
-					alpha_tmp[dir] = 0; // set to 0, as it is a possible state
+					//alpha_tmp[dir] = 0; // set to 0, as it is a possible state
 					// check if state has been visited
-					if(has_visited_state(bb_dir[dir], bb_2) == 1) {
+
+					// check if state has been visited
+					int* set_p;
+					int* value_p;
+					if(has_visited_state(bb_dir[dir], bb_2, &set_p, &value_p) == 1) {
 						// new state!
 						// need a copy of the modified board for each try
 						uint64_t bits_tmp[7];
@@ -806,21 +902,32 @@ int eval1(	int turn,
 						bits_tmp[piece] = bits_dir[dir];
 						// perform minimax on this move
 						alpha_tmp[dir] = eval1(2, alpha, beta, bb_dir[dir], bb_2, bits_tmp, bits_2, curr_ply);
-						
-						// check alpha value
-						if(alpha_tmp[dir] > alpha) {
-							// set as current alpha
-							alpha = alpha_tmp[dir];
-
-							if(curr_ply == 1 && deepest_ply_curr_iter > deepest_ply) {
-								// make sure we only set the new way to go if this iteration had time to go deeper
-								piece_to_move = piece;
-								dir_to_move = dir;
-								new_piece_position = bits_dir[dir];
-								new_bb = bb_dir[dir];
-							}
+						// store the eval of this state and mark it as set
+						*value_p = alpha_tmp[dir];
+						*set_p = 1;
+					} else {
+						// state has alreayd been visited
+						// check if the value has been set
+						// if not, its a loop, set val to 0
+						if(set_p) {
+							alpha_tmp[dir] = *value_p;
+						} else {
+							alpha_tmp[dir] = 0;  // because a loop is effectively a draw
 						}
 					}	
+					// check alpha value
+					if(alpha_tmp[dir] > alpha) {
+						// set as current alpha
+						alpha = alpha_tmp[dir];
+
+						if(curr_ply == 1 && deepest_ply_curr_iter > deepest_ply) {
+							// make sure we only set the new way to go if this iteration had time to go deeper
+							piece_to_move = piece;
+							dir_to_move = dir;
+							new_piece_position = bits_dir[dir];
+							new_bb = bb_dir[dir];
+						}
+					}
 				}				
 				// break if we have reached max possible alpha
 				// or if beta is less than or qual to alpha
@@ -858,22 +965,36 @@ int eval1(	int turn,
 
 				if (trydir(dir, &(bits_dir[dir]), &(bb_dir[dir]), bb_1) == 0) {
 					// possible to move this direction
-					beta_tmp[dir] = 0; // set to 0, as it is a possible state
+					//beta_tmp[dir] = 0; // set to 0, as it is a possible state
 					// check if state has been visited
-					if(has_visited_state(bb_1, bb_dir[dir]) == 1) {
+					int* set_p;
+					int* value_p;
+					if(has_visited_state(bb_dir[dir], bb_2, &set_p, &value_p) == 1) {
 						// new state!
 						// need a copy of the modified board for each try
 						uint64_t bits_tmp[7];
-						memcpy(bits_tmp, bits_2, 7*sizeof(uint64_t));
-						bits_tmp[piece_idx] = bits_dir[dir];
+						memcpy(bits_tmp, bits_1, 7*sizeof(uint64_t));
+						bits_tmp[piece] = bits_dir[dir];
 						// perform minimax on this move
 						beta_tmp[dir] = eval1(1, alpha, beta, bb_1, bb_dir[dir], bits_1, bits_tmp, curr_ply);
-						// check beta value
-						if(beta_tmp[dir] < beta) {
-							// set as current beta
-							beta = beta_tmp[dir];
+						// store the eval of this state and mark it as set
+						*value_p = beta_tmp[dir];
+						*set_p = 1;
+					} else {
+						// state has alreayd been visited
+						// check if the value has been set
+						// if not, its a loop, set val to 0
+						if(set_p) {
+							beta_tmp[dir] = *value_p;
+						} else {
+							beta_tmp[dir] = 0;  // because a loop is effectively a draw
 						}
 					}
+					// check beta value
+					if(beta_tmp[dir] < beta) {
+						// set as current beta
+						beta = beta_tmp[dir];
+					}					
 				}
 				// break if we have reached min possible beta
 				// or if beta is less than or qual to alpha
@@ -885,7 +1006,6 @@ int eval1(	int turn,
 			if(beta == beta_min || beta <= alpha)
 				break;
 		}
-	
 		return beta;
 	}
 }

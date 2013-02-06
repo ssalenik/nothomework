@@ -27,13 +27,15 @@ typedef enum {white, black} turn_t;
 typedef struct node {
  	uint64_t b_white;
 	uint64_t b_black;
+	int set;	// 0 if not yet set, 1 otherwise
+	int value;		// the eval of this state, if found
 	struct node *next;
 } list_t, *list_p;
 
 #endif /* AI_H_ */
 
 uint64_t generate_key(uint64_t w, uint64_t b);
-int has_visited_state(uint64_t bitboard_white, uint64_t bitboard_black);
+int has_visited_state(uint64_t bitboard_white, uint64_t bitboard_black, int** set_p, int** value_p);
 int trydir(int dir, uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent);
 int trynorth(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent);
 int trysouth(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent);
