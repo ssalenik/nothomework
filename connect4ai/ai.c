@@ -1,3 +1,8 @@
+/**
+ * Stepan Salenikovich
+ * ECSE 526
+ * Assignment 1
+ */
 #include "ai.h"
 
 #define DEBUG 0 // enable/disable certain debug prting messages

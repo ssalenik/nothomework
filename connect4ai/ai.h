@@ -1,3 +1,8 @@
+/**
+ * Stepan Salenikovich
+ * ECSE 526
+ * Assignment 1
+ */
 #ifndef AI_H_
 #define AI_H_
 

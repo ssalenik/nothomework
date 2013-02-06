@@ -1,3 +1,8 @@
+/**
+ * Stepan Salenikovich
+ * ECSE 526
+ * Assignment 1
+ */
 #include "printstate.h"
 
 /* game state */

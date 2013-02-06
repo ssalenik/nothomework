@@ -1,3 +1,8 @@
+/**
+ * Stepan Salenikovich
+ * ECSE 526
+ * Assignment 1
+ */
 #include "connect4.h"
 
 #define DEFAULT_START "default.txt"	//used if no input file is specified

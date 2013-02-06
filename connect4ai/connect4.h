@@ -1,3 +1,8 @@
+/**
+ * Stepan Salenikovich
+ * ECSE 526
+ * Assignment 1
+ */
 #ifndef CONNECT4_H_
 #define CONNECT4_H_
 

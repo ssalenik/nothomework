@@ -1,3 +1,8 @@
+/**
+ * Stepan Salenikovich
+ * ECSE 526
+ * Assignment 1
+ */
 #ifndef PRINTSTATE_H_
 #define PRINTSTATE_H_
 
