@@ -67,11 +67,4 @@ int alphabeta(	int turn,
 				uint64_t bits_1[],
 				uint64_t bits_2[],
 				int curr_ply);
-int eval1(	int turn,
-			int alpha,
-			int beta,
-			uint64_t bb_1,
-			uint64_t bb_2,
-			uint64_t bits_1[],
-			uint64_t bits_2[],
-			int curr_ply);
+int eval1(uint64_t bits_1[], uint64_t bits_2[]);
