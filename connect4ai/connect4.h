@@ -13,9 +13,8 @@
 
 #endif /* CONNECT4_H_ */
 
-int showstate();
+/* prints the help */
 int printhelp();
+
+/* parse input file and save state into bitboards */
 int parsefile(char *ifile);
-int getinput();
-int validatemove();
-int executemove();

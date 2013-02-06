@@ -8,6 +8,7 @@
 #define BORDER_N 127
 #define BORDER_S 35747322042253312
 
+/* hash table - which is not currently used */
 KHASH_MAP_INIT_INT64(64, list_t*);
 khash_t(64) *h;
 
@@ -41,67 +42,14 @@ uint64_t new_bb;
 /* time keeping */
 struct timeval tvBegin, tvEnd, tvDiff;
 
-/* 1 if running out of time, 0 otherwise */
-int check_time()
-{
-	struct timeval tvEnd;
-	// curr time
-	gettimeofday(&tvEnd, NULL);
-    int diff = (tvEnd.tv_sec) - (tvBegin.tv_sec);
-    // tvDiff.tv_sec = diff / 1000000;
-    // tvDiff.tv_usec = diff % 1000000;
-
-    return (diff>=19);
-}
-
-/* Return 1 if the difference is negative, otherwise 0.  */
-int timeval_subtract(struct timeval *result, struct timeval *t2, struct timeval *t1)
-{
-    long int diff = (t2->tv_usec + 1000000 * t2->tv_sec) - (t1->tv_usec + 1000000 * t1->tv_sec);
-    result->tv_sec = diff / 1000000;
-    result->tv_usec = diff % 1000000;
-
-    return (diff<0);
-}
-
-/* checks if end-game has been reached
- * returns:
- * 0 - if no win
- * 1 - if win (horizontal)
- * 2 - if win (vertical)
- * 3 - if win (diagonal \ )
- * 4 - if win (diagonal / )
+/* plays 1 AI turn
+ * assumes it is the turn of player 1
+ * updates the state of the board to reflect the move
  *
- * algo adapted from:
- * http://stackoverflow.com/questions/7033165/algorithm-to-check-a-connect-four-field
- * which an algo by John Tromp from http://homepages.cwi.nl/~tromp/c4/fhour.html	
+ * returns: 1 if AI makes winning move
+ 			0 if play continues
+ 			-1 if input was a winning state for player 2
  */
-int check_endgame(uint64_t board) {
-	// horizontal check
-	uint64_t copy = board & (board >> 1);
-	if (copy & (copy >> 2))
-    	return 1;
-    // vertical check	
-    copy = board & (board >> 8);
-    if (copy & (copy >> 2*8))
-    	return 2;
-    // diagonal / check
-    copy = board & (board >> 7);
-    if (copy & (copy >> 2*7))
-    	return 3;
-    // diagonal \ check
-    copy = board & (board >> 9);
-    if (copy & (copy >> 2*9))
-    	return 4;
-
-    return 0;
-}
-
-/* generates key for the hash table (not unique) */
-uint64_t generate_key(uint64_t w, uint64_t b) {
-	return w ^ (b << 8);
-}
-
 int play_ai_turn(	turn_t turn,
 					ai_t ai,
 					uint64_t *bb_1,
@@ -229,7 +177,67 @@ int play_ai_turn(	turn_t turn,
 	}
 
 }
+/* 1 if running out of time, 0 otherwise */
+int check_time()
+{
+	struct timeval tvEnd;
+	// curr time
+	gettimeofday(&tvEnd, NULL);
+    int diff = (tvEnd.tv_sec) - (tvBegin.tv_sec);
+    // tvDiff.tv_sec = diff / 1000000;
+    // tvDiff.tv_usec = diff % 1000000;
 
+    return (diff>=19);
+}
+
+/* Return 1 if the difference is negative, otherwise 0.  */
+int timeval_subtract(struct timeval *result, struct timeval *t2, struct timeval *t1)
+{
+    long int diff = (t2->tv_usec + 1000000 * t2->tv_sec) - (t1->tv_usec + 1000000 * t1->tv_sec);
+    result->tv_sec = diff / 1000000;
+    result->tv_usec = diff % 1000000;
+
+    return (diff<0);
+}
+
+/* checks if end-game has been reached
+ * returns:
+ * 0 - if no win
+ * 1 - if win (horizontal)
+ * 2 - if win (vertical)
+ * 3 - if win (diagonal \ )
+ * 4 - if win (diagonal / )
+ *
+ * algo adapted from:
+ * http://stackoverflow.com/questions/7033165/algorithm-to-check-a-connect-four-field
+ * which an algo by John Tromp from http://homepages.cwi.nl/~tromp/c4/fhour.html	
+ */
+int check_endgame(uint64_t board) {
+	// horizontal check
+	uint64_t copy = board & (board >> 1);
+	if (copy & (copy >> 2))
+    	return 1;
+    // vertical check	
+    copy = board & (board >> 8);
+    if (copy & (copy >> 2*8))
+    	return 2;
+    // diagonal / check
+    copy = board & (board >> 7);
+    if (copy & (copy >> 2*7))
+    	return 3;
+    // diagonal \ check
+    copy = board & (board >> 9);
+    if (copy & (copy >> 2*9))
+    	return 4;
+
+    return 0;
+}
+
+/* generates key for the hash table (not unique) */
+uint64_t generate_key(uint64_t w, uint64_t b) {
+	return w ^ (b << 8);
+}
+/* frees all the value memory and then destroyes the hashtable */
 int delete_hashtable() {
 	khiter_t k;
 
@@ -252,6 +260,7 @@ int delete_hashtable() {
 	return 0;
 }
 
+/* deletes all the key/values in the hash table; frees value memory */
 int free_hashtable() {
 	khiter_t k;
 
@@ -550,9 +559,7 @@ int minimax(int turn,
 /* performs recursive alphabeta algo
  * assumes player 1 is max player
  *
- * @return: 1 if player who starts (turn) wins
- *			0 if its a draw/no winning state is found before cutoff is reached
- *			-1 if player who starts (turn) loses
+ * uses evaluation function if the global var speicies to do so
  */
 int alphabeta(	int turn,
 				int alpha,
@@ -743,6 +750,11 @@ int alphabeta(	int turn,
 	}
 }
 
+/* evalutation function
+ * takes the state of the board in individual pieces as input
+ * retuns a value between INT_MAX and INT_MIN
+ * the higher the value, the better for player 1
+ */
 int eval1(uint64_t bits_1[], uint64_t bits_2[]) {
 	int i;
 	int sum_1, sum_2 = 0;
@@ -784,6 +796,7 @@ int eval1(uint64_t bits_1[], uint64_t bits_2[]) {
 	return sum_1 - sum_2;
 }
 
+/* calls the try<direction> function for the given dir */
 int trydir(int dir, uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent) {
 	switch(dir) {
 	case N:

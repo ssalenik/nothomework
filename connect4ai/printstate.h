@@ -9,4 +9,7 @@
 
 #endif /* PRINTSTATE_H_ */
 
+/*
+ * prints the game state from the bitboard representation
+ */
 int showstate(uint64_t white_bits[], uint64_t black_bits[]);

@@ -29,10 +29,13 @@ int printhelp() {
 			"\t-w\t\tuser plays as white\n"
 			"\t-b\t\tuser plays as black\n"
 			"\t-f <file>\tspecify input file for starting positions\n"
+			"\t-d <number>\tspecify the depth cut-off (default 30)\n"
+			"\t-1\t\tuse minimax AI\n"
+			"\t-2\t\tuse alpha-beta AI\n"
+			"\t-3\t\tuse alpha-beta AI with itterative deepening\n"
+			"\t-4\t\tuse the eval function with alpha-beta AI and itterative deepening (default)\n"
 			"in-game commands:\n"
 			"\tmove:\t<x,y,direction>; eg: 12W - will move the piece at <1,2> to the right\n"
-			"\thelp:\ttype \'help\'\n"
-			"\texit:\ttype \'exit\'\n\n"
 			"input file:\n"
 			"\tThe input file should contain comma sperated starting locations for each piece.\n"
 			"\tThe first line contains the positions for all of the white pieces, and then\n"
@@ -44,11 +47,6 @@ int printhelp() {
 	return 0;
 }
 
-/* gets input from user */
-int getinput() {
-
-	return 0;
-}
 /* parse input file and save state into bitboards */
 int parsefile(char *ifile) {
 	FILE *file;
@@ -203,6 +201,7 @@ int main(int argc, char** argv) {
         case 'h':
         	//print help
         	errflg++;
+        	break;
        	case 'd':
         	//depth cutoff
             depth_cutoff = atoi(optarg);
