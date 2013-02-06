@@ -1,8 +1,10 @@
 /**
- * Stepan Salenikovich
- * ECSE 526
- * Assignment 1
- */
+	* Stepan Salenikovich
+	* ECSE 526
+	* Assignment 1
+	*
+	* ai.c
+	*/
 #include "ai.h"
 
 #define DEBUG 0 // enable/disable certain debug prting messages
@@ -22,14 +24,18 @@ char direction_char[4] = {'N', 'E', 'W', 'S'};
 
 /* order in which to visit each state by piece and direction */
 int dir_order[4] = {E, W, N, S};
+//int dir_order[4] = {S, N, W, E};
+// int dir_order[4] = {W, S, E, N};
+
 int piece_order[7] = {0, 1, 2, 3, 4, 5, 6};
+//int piece_order[7] = {6, 5, 4, 3, 2, 1, 0};
 
-int alpha_max;	// the max possible alpha
-int beta_min;	// the min possible beta
+int alpha_max; // the max possible alpha
+int beta_min; // the min possible beta
 
-ai_t ai_selected;	// the AI type specified for use
+ai_t ai_selected; // the AI type specified for use
 
-int ply_cutoff; 	// the ply/depth cutoff specified
+int ply_cutoff;  // the ply/depth cutoff specified
 
 /* vars used to keep track of algorithm */
 uint64_t states_visited = 0;
@@ -48,14 +54,14 @@ uint64_t new_bb;
 struct timeval tvBegin, tvEnd, tvDiff;
 
 /* plays 1 AI turn
- * assumes it is the turn of player 1
- * updates the state of the board to reflect the move
- *
- * returns: 1 if AI makes winning move
- 			0 if play continues
- 			-1 if input was a winning state for player 2
- */
-int play_ai_turn(	turn_t turn,
+	* assumes it is the turn of player 1
+	* updates the state of the board to reflect the move
+	*
+	* returns: 1 if AI makes winning move
+				0 if play continues
+				-1 if input was a winning state for player 2
+	*/
+int play_ai_turn( turn_t turn,
 					ai_t ai,
 					uint64_t *bb_1,
 					uint64_t bb_2,
@@ -65,7 +71,7 @@ int play_ai_turn(	turn_t turn,
 {
 
 	/* initializations */
-	h = kh_init(64);  // allocate a hash table
+	//h = kh_init(64);  // allocate a hash table
 	int* value_p;
 	int* set_p;
 	//has_visited_state(*bb_1, bb_2, &set_p, &value_p); // save the initial state
@@ -78,22 +84,34 @@ int play_ai_turn(	turn_t turn,
 	ai_selected = ai;
 
 	// get initial time
-    gettimeofday(&tvBegin, NULL);
+	gettimeofday(&tvBegin, NULL);
 
-    
-    switch(ai) {
-    case minimax_ai:
-    	/* minimax */
-    	alpha_max = 1;
-    	beta_min = -1;
+				
+	switch(ai) {
+	case minimax_ai:
+		/* minimax */
+		alpha_max = 1;
+		beta_min = -1;
 		ply_cutoff = d_cutoff;
-    	ply_cutoff = d_cutoff;
-    	util = minimax(1, *bb_1, bb_2, bits_1, bits_2, 0);
-    	states_visited = states_visited_curr_iter;
-   		deepest_ply = deepest_ply_curr_iter;
-    	break;
-    case alphabeta_ai:
-    	/* alphabeta */
+		ply_cutoff = d_cutoff;
+		util = minimax(1, *bb_1, bb_2, bits_1, bits_2, 0);
+		states_visited = states_visited_curr_iter;
+		deepest_ply = deepest_ply_curr_iter;
+		break;
+	case alphabeta_ai:
+	case eval1_ai:
+		/* alphabeta */
+		// possibly using eval function
+		switch(ai){
+		case eval1_ai:
+			alpha_max = INT_MAX;
+			beta_min = INT_MIN;
+			break;
+		default:
+			alpha_max = 1;
+			beta_min = -1;
+			break;
+		}
 		ply_cutoff = d_cutoff;
 		// set the max and min possible values of alpha and beta
 		alpha_max = 1;
@@ -101,17 +119,17 @@ int play_ai_turn(	turn_t turn,
 		// perform alpha-beta algo
 		util = alphabeta(1, beta_min, alpha_max, *bb_1, bb_2, bits_1, bits_2, 0);
 		states_visited = states_visited_curr_iter;
-   		deepest_ply = deepest_ply_curr_iter;
+					deepest_ply = deepest_ply_curr_iter;
 		break;
-	case eval1_ai:
-	case eval2_ai:
 	case ab_iter_ai:
+	case eval1_iter_ai:
+	
 		/* alpha-beta with iterative deepening */
 		// possibly using eval function
 		ply_cutoff = 1;
 		// set the max and min possible values of alpha and beta
 		switch(ai){
-		case eval1_ai:
+		case eval1_iter_ai:
 			alpha_max = INT_MAX;
 			beta_min = INT_MIN;
 			break;
@@ -125,8 +143,8 @@ int play_ai_turn(	turn_t turn,
 			states_visited_curr_iter = 0;
 			deepest_ply_curr_iter = 0;
 			// if(ply_cutoff != 1) {
-			// 	free_hashtable(); //free memory except the first run
-			// 	has_visited_state(*bb_1, bb_2, &set_p, &value_p); // save the initial state
+			//  free_hashtable(); //free memory except the first run
+			//  has_visited_state(*bb_1, bb_2, &set_p, &value_p); // save the initial state
 			// }
 			util = alphabeta(1, beta_min, alpha_max, *bb_1, bb_2, bits_1, bits_2, 0);
 			if(deepest_ply_curr_iter > deepest_ply)
@@ -136,25 +154,25 @@ int play_ai_turn(	turn_t turn,
 			ply_cutoff++;
 		}
 		break;
-    }
+	}
 
-    // show the move
-    int pos[2];
-    position_lookup(bits_1[piece_to_move], pos);
+	// show the move
+	int pos[2];
+	position_lookup(bits_1[piece_to_move], pos);
 
-    printf("\nmove: %i%i%c\n", pos[0], pos[1], direction_char[dir_to_move]);
+	printf("\nmove: %i%i%c\n", pos[0], pos[1], direction_char[dir_to_move]);
 
-    // update board and bits
-    *bb_1 = new_bb;
-    bits_1[piece_to_move] = new_piece_position;
+	// update board and bits
+	*bb_1 = new_bb;
+	bits_1[piece_to_move] = new_piece_position;
 
-    if(turn == white) {
-    	// AI moved white
-    	showstate(bits_1, bits_2);
-    } else {
-    	// AI moved black
-    	showstate(bits_2, bits_1);
-    }
+	if(turn == white) {
+		// AI moved white
+		showstate(bits_1, bits_2);
+	} else {
+		// AI moved black
+		showstate(bits_2, bits_1);
+	}
 
 	//time elapsed
 	gettimeofday(&tvEnd, NULL);
@@ -169,7 +187,7 @@ int play_ai_turn(	turn_t turn,
 	#endif
 
 	// free memory
-	delete_hashtable();
+	//delete_hashtable();
 
 	if(util == alpha_max && deepest_ply == 1) {
 		// AI wins
@@ -188,54 +206,54 @@ int check_time()
 	struct timeval tvEnd;
 	// curr time
 	gettimeofday(&tvEnd, NULL);
-    int diff = (tvEnd.tv_sec) - (tvBegin.tv_sec);
-    // tvDiff.tv_sec = diff / 1000000;
-    // tvDiff.tv_usec = diff % 1000000;
+				int diff = (tvEnd.tv_sec) - (tvBegin.tv_sec);
+				// tvDiff.tv_sec = diff / 1000000;
+				// tvDiff.tv_usec = diff % 1000000;
 
-    return (diff>=19);
+				return (diff>=19);
 }
 
 /* Return 1 if the difference is negative, otherwise 0.  */
 int timeval_subtract(struct timeval *result, struct timeval *t2, struct timeval *t1)
 {
-    long int diff = (t2->tv_usec + 1000000 * t2->tv_sec) - (t1->tv_usec + 1000000 * t1->tv_sec);
-    result->tv_sec = diff / 1000000;
-    result->tv_usec = diff % 1000000;
+				long int diff = (t2->tv_usec + 1000000 * t2->tv_sec) - (t1->tv_usec + 1000000 * t1->tv_sec);
+				result->tv_sec = diff / 1000000;
+				result->tv_usec = diff % 1000000;
 
-    return (diff<0);
+				return (diff<0);
 }
 
 /* checks if end-game has been reached
- * returns:
- * 0 - if no win
- * 1 - if win (horizontal)
- * 2 - if win (vertical)
- * 3 - if win (diagonal \ )
- * 4 - if win (diagonal / )
- *
- * algo adapted from:
- * http://stackoverflow.com/questions/7033165/algorithm-to-check-a-connect-four-field
- * which an algo by John Tromp from http://homepages.cwi.nl/~tromp/c4/fhour.html	
- */
+	* returns:
+	* 0 - if no win
+	* 1 - if win (horizontal)
+	* 2 - if win (vertical)
+	* 3 - if win (diagonal \ )
+	* 4 - if win (diagonal / )
+	*
+	* algo adapted from:
+	* http://stackoverflow.com/questions/7033165/algorithm-to-check-a-connect-four-field
+	* which an algo by John Tromp from http://homepages.cwi.nl/~tromp/c4/fhour.html 
+	*/
 int check_endgame(uint64_t board) {
 	// horizontal check
 	uint64_t copy = board & (board >> 1);
 	if (copy & (copy >> 2))
-    	return 1;
-    // vertical check	
-    copy = board & (board >> 8);
-    if (copy & (copy >> 2*8))
-    	return 2;
-    // diagonal / check
-    copy = board & (board >> 7);
-    if (copy & (copy >> 2*7))
-    	return 3;
-    // diagonal \ check
-    copy = board & (board >> 9);
-    if (copy & (copy >> 2*9))
-    	return 4;
+					return 1;
+				// vertical check 
+				copy = board & (board >> 8);
+				if (copy & (copy >> 2*8))
+					return 2;
+				// diagonal / check
+				copy = board & (board >> 7);
+				if (copy & (copy >> 2*7))
+					return 3;
+				// diagonal \ check
+				copy = board & (board >> 9);
+				if (copy & (copy >> 2*9))
+					return 4;
 
-    return 0;
+				return 0;
 }
 
 /* generates key for the hash table (not unique) */
@@ -290,11 +308,11 @@ int free_hashtable() {
 }
 
 /* function which checks if the state given has already been visited
- * does this by checking the hash table of states
- * if state is new, stores it in the hash table
- *
- * @return - 1 if new, 0 if visited already
- */
+	* does this by checking the hash table of states
+	* if state is new, stores it in the hash table
+	*
+	* @return - 1 if new, 0 if visited already
+	*/
 int has_visited_state(uint64_t bitboard_white, uint64_t bitboard_black, int** set_p, int** value_p) {
 	int ret;
 	khiter_t k;
@@ -318,14 +336,14 @@ int has_visited_state(uint64_t bitboard_white, uint64_t bitboard_black, int** se
 		new_list->b_white = bitboard_white;
 		new_list->b_black = bitboard_black;
 		new_list->set = 0;  // not yet found
-		new_list->value = 0;	// arbitrary
+		new_list->value = 0; // arbitrary
 		new_list->next = NULL;
 		kh_value(h, k) = new_list;
 
 		*set_p = &(new_list->set);
 		*value_p = &(new_list->value);
 
-		states_visited_curr_iter++;	//incremente states visited count
+		states_visited_curr_iter++; //incremente states visited count
 		
 		has_visited = 1;
 	} else {
@@ -375,17 +393,17 @@ int has_visited_state(uint64_t bitboard_white, uint64_t bitboard_black, int** se
 			new_state->b_white = bitboard_white;
 			new_state->b_black = bitboard_black;
 			new_state->set = 0;  // not yet found
-			new_state->value = 0;	// arbitrary
+			new_state->value = 0; // arbitrary
 			new_state->next = NULL;
 			old_list->next = new_state;
 
 			*set_p = &(new_state->set);
 			*value_p = &(new_state->value);
 
-			collisions++;	// key was the same, but it was a different state
-			states_visited_curr_iter++;	//incremente states visited count
+			collisions++; // key was the same, but it was a different state
+			states_visited_curr_iter++; //incremente states visited count
 
-			has_visited = 1;	// just to make sure
+			has_visited = 1; // just to make sure
 		}
 	}
 
@@ -394,12 +412,12 @@ int has_visited_state(uint64_t bitboard_white, uint64_t bitboard_black, int** se
 }
 
 /* performs recursive minimax algo
- * assumes player 1 is max player
- *
- * @return: 1 if player who starts (turn) wins
- *			0 if its a draw/no winning state is found before cutoff is reached
- *			-1 if player who starts (turn) loses
- */
+	* assumes player 1 is max player
+	*
+	* @return: 1 if player who starts (turn) wins
+	*   0 if its a draw/no winning state is found before cutoff is reached
+	*   -1 if player who starts (turn) loses
+	*/
 int minimax(int turn,
 			uint64_t bb_1,
 			uint64_t bb_2,
@@ -424,7 +442,7 @@ int minimax(int turn,
 	}
 	// check if we have reached the depth cutoff
 	
-	if (curr_ply == ply_cutoff || check_time()) {
+	if (curr_ply == ply_cutoff) { // || check_time()) {
 		// depth cutoff, and no winner
 		return 0;
 	}
@@ -445,7 +463,7 @@ int minimax(int turn,
 		// try the 7 possible pieces
 		for(piece_idx = 0; piece_idx < 7; piece_idx++) {
 			uint64_t bits_dir;
-			uint64_t bb_dir;			
+			uint64_t bb_dir;   
 			piece = piece_order[piece_idx];
 
 			// try the 4 possible directions
@@ -510,7 +528,7 @@ int minimax(int turn,
 		// try the 7 possible pieces
 		for(piece_idx = 0; piece_idx < 7; piece_idx++) {
 			uint64_t bits_dir;
-			uint64_t bb_dir;			
+			uint64_t bb_dir;   
 			piece = piece_order[piece_idx];
 
 			// try the 4 possible directions
@@ -562,11 +580,11 @@ int minimax(int turn,
 }
 
 /* performs recursive alphabeta algo
- * assumes player 1 is max player
- *
- * uses evaluation function if the global var speicies to do so
- */
-int alphabeta(	int turn,
+	* assumes player 1 is max player
+	*
+	* uses evaluation function if the global var speicies to do so
+	*/
+int alphabeta( int turn,
 				int alpha,
 				int beta,
 				uint64_t bb_1,
@@ -597,7 +615,7 @@ int alphabeta(	int turn,
 		// depth cutoff or time cutoff, and no winner
 		// return 0 if we using just alpha-beta
 		// perform eval function otherwise
-		if(ai_selected == eval1_ai) {
+		if(ai_selected == eval1_ai || ai_selected == eval1_iter_ai) {
 			return eval1(bits_1, bits_2);
 		} else {
 			return 0;
@@ -620,7 +638,7 @@ int alphabeta(	int turn,
 		// try the 7 possible pieces
 		for(piece_idx = 0; piece_idx < 7; piece_idx++) {
 			uint64_t bits_dir[4];
-			uint64_t bb_dir[4];			
+			uint64_t bb_dir[4];   
 			
 			piece = piece_order[piece_idx];
 			
@@ -657,7 +675,7 @@ int alphabeta(	int turn,
 						} else {
 							utility_tmp = 0;  // because a loop is effectively a draw
 						}
-					}	
+					} 
 					// check alpha value
 					if(utility_tmp > utility) {
 						// set as current alpha
@@ -671,7 +689,7 @@ int alphabeta(	int turn,
 							new_bb = bb_dir[dir];
 						}
 					}
-				}				
+				}    
 				// break if we have reached max possible alpha
 				// or if beta is less than or qual to alpha
 				if(utility >= beta) {
@@ -694,7 +712,7 @@ int alphabeta(	int turn,
 		// try the 7 possible pieces
 		for(piece_idx = 0; piece_idx < 7; piece_idx++) {
 			uint64_t bits_dir[4];
-			uint64_t bb_dir[4];			
+			uint64_t bb_dir[4];   
 			
 			piece = piece_order[piece_idx];
 			
@@ -735,8 +753,8 @@ int alphabeta(	int turn,
 					// check value
 					if(utility_tmp < utility) {
 						// set as current util
-						utility = utility_tmp;	
-					}			
+						utility = utility_tmp; 
+					}   
 				}
 				// break if we have reached min possible beta
 				// or if beta is less than or qual to alpha
@@ -756,47 +774,54 @@ int alphabeta(	int turn,
 }
 
 /* evalutation function
- * takes the state of the board in individual pieces as input
- * retuns a value between INT_MAX and INT_MIN
- * the higher the value, the better for player 1
- */
+	* takes the state of the board in individual pieces as input
+	* retuns a value between INT_MAX and INT_MIN
+	* the higher the value, the better for player 1
+	*/
 int eval1(uint64_t bits_1[], uint64_t bits_2[]) {
-	int i;
-	int sum_1, sum_2 = 0;
+	int i, j;
+	int sum_1 = 0, sum_2 = 0;
 	int pos_start[2];
 	int pos_end[2];
 	int x_diff, y_diff;
 
-	position_lookup(bits_1[0], pos_start);
-	// add up the distances squared of player 1
-	for(i = 1; i < 7; i++) {
-		position_lookup(bits_1[i], pos_end);
-		// x distance
-		x_diff = abs(pos_start[0] - pos_end[0]);
-		// since 7 is the max distance
-		// if they are 7 appart, we don't worry
-		x_diff = 7 - x_diff;
-		// same for y distance
-		y_diff = abs(pos_start[1] - pos_end[1]);
-		y_diff = 7 - y_diff;
-		// square it - the closer they are, the more dangerous it is
-		sum_1 += (x_diff+y_diff)*(x_diff+y_diff);
+	for(i = 0; i < 7; i++) {
+		position_lookup(bits_1[i], pos_start);
+		// add up the distances squared of player 1
+		for(j = 0; j < 7; j++) {
+			position_lookup(bits_1[j], pos_end);
+			// if(pos_end[0] < 0 || pos_end[1] < 0)
+			//  printf("bit: %llu\n", bits_1[j]);
+			// x distance
+			x_diff = abs(pos_start[0] - pos_end[0]);
+			// since 7 is the max distance
+			// if they are 7 appart, we don't worry
+			x_diff = (7 - x_diff)*2;
+			// same for y distance
+			y_diff = abs(pos_start[1] - pos_end[1]);
+			y_diff = (7 - y_diff)*2;
+			// square it - the closer they are, the more dangerous it is
+			sum_1 += (x_diff*x_diff) + (y_diff*y_diff);
+
+		}
 	}
 
-	position_lookup(bits_2[0], pos_start);
-	// add up the distances squared of player 2
-	for(i = 1; i < 7; i++) {
-		position_lookup(bits_2[i], pos_end);
-		// x distance
-		x_diff = abs(pos_start[0] - pos_end[0]);
-		// since 7 is the max distance
-		// if they are 7 appart, we don't worry
-		x_diff = 7 - x_diff;
-		// same for y distance
-		y_diff = abs(pos_start[1] - pos_end[1]);
-		y_diff = 7 - y_diff;
-		// square it - the closer they are, the more dangerous it is
-		sum_2 += (x_diff+y_diff)*(x_diff+y_diff);
+	for(i = 0; i < 7; i++) {
+		position_lookup(bits_2[i], pos_start);
+		// add up the distances squared of player 2
+		for(j = 0; j < 7; j++) {
+			position_lookup(bits_2[i], pos_end);
+			// x distance
+			x_diff = abs(pos_start[0] - pos_end[0]);
+			// since 7 is the max distance
+			// if they are 7 appart, we don't worry
+			x_diff = (7 - x_diff)*2;
+			// same for y distance
+			y_diff = abs(pos_start[1] - pos_end[1]);
+			y_diff = (7 - y_diff)*2;
+			// square it - the closer they are, the more dangerous it is
+			sum_2 += (x_diff*x_diff) + (y_diff*y_diff);
+		}
 	}
 	return sum_1 - sum_2;
 }
@@ -817,13 +842,13 @@ int trydir(int dir, uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent) {
 		return trywest(piece, bb_own, bb_oponent);
 		break;
 	}
-	return 1;	// not possible if incompatible dir is specified
+	return 1; // not possible if incompatible dir is specified
 }
 
 /* attempts to move the given piece north one spot
- * returns 0 if successful, 1 if move not possible
- * updates piece and the corresponding bitboard if possible
- */
+	* returns 0 if successful, 1 if move not possible
+	* updates piece and the corresponding bitboard if possible
+	*/
 int trynorth(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent) {
 	uint64_t piece_tmp = *piece;
 	// first check if its trying to move off the board
@@ -842,9 +867,9 @@ int trynorth(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent) {
 }
 
 /* attempts to move the given piece south one spot
- * returns 0 if successful, 1 if move not possible
- * updates piece and the corresponding bitboard if possible
- */
+	* returns 0 if successful, 1 if move not possible
+	* updates piece and the corresponding bitboard if possible
+	*/
 int trysouth(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent) {
 	uint64_t piece_tmp = *piece;
 	// first check if its trying to move off the board
@@ -863,9 +888,9 @@ int trysouth(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent) {
 }
 
 /* attempts to move the given piece west one spot
- * returns 0 if successful, 1 if move not possible
- * updates piece and the corresponding bitboard if possible
- */
+	* returns 0 if successful, 1 if move not possible
+	* updates piece and the corresponding bitboard if possible
+	*/
 int trywest(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent) {
 	uint64_t piece_tmp = *piece;
 	// first check if its trying to move off the board
@@ -884,9 +909,9 @@ int trywest(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent) {
 }
 
 /* attempts to move the given piece east one spot
- * returns 0 if successful, 1 if move not possible
- * updates piece and the corresponding bitboard if possible
- */
+	* returns 0 if successful, 1 if move not possible
+	* updates piece and the corresponding bitboard if possible
+	*/
 int tryeast(uint64_t *piece, uint64_t *bb_own, uint64_t bb_oponent) {
 	uint64_t piece_tmp = *piece;
 	// first check if its trying to move off the board
@@ -934,9 +959,9 @@ int position_lookup(uint64_t piece, int pos[]) {
 		pos[0] = 4; pos[1] = 2; break;
 	case 4096:
 		pos[0] = 5; pos[1] = 2; break;
-	case 8182:
+	case 8192:
 		pos[0] = 6; pos[1] = 2; break;
-	case 16364:
+	case 16384:
 		pos[0] = 7; pos[1] = 2; break;
 
 	/* row 3 */

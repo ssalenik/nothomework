@@ -2,6 +2,8 @@
  * Stepan Salenikovich
  * ECSE 526
  * Assignment 1
+ *
+ * connect
  */
 #include "connect4.h"
 
@@ -38,7 +40,8 @@ int printhelp() {
 			"\t-1\t\tuse minimax AI\n"
 			"\t-2\t\tuse alpha-beta AI\n"
 			"\t-3\t\tuse alpha-beta AI with itterative deepening\n"
-			"\t-4\t\tuse the eval function with alpha-beta AI and itterative deepening (default)\n"
+			"\t-4\t\tuse the eval function with alpha-beta AI\n"
+			"\t-5\t\tuse the eval function with alpha-beta AI and itterative deepening (default)\n"
 			"in-game commands:\n"
 			"\tmove:\t<x,y,direction>; eg: 12W - will move the piece at <1,2> to the right\n"
 			"input file:\n"
@@ -165,7 +168,7 @@ int main(int argc, char** argv) {
     extern char *optarg;
     extern int optind, optopt;
 
-    ai_t ai = eval1_ai; // the default ai, if none is specified
+    ai_t ai = eval1_iter_ai; // the default ai, if none is specified
     int depth_cutoff = 30; 	// the default search depth cut-off
 
     turn_t ai_turn = white;	// the default first turn is white
@@ -201,7 +204,7 @@ int main(int argc, char** argv) {
             break;
         case '5':
         	// AI 5 - eval function 2
-        	ai = eval2_ai;
+        	ai = eval1_iter_ai;
             break;
         case 'h':
         	//print help

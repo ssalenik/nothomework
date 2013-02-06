@@ -2,6 +2,8 @@
  * Stepan Salenikovich
  * ECSE 526
  * Assignment 1
+ *
+ * ai.h
  */
 #ifndef AI_H_
 #define AI_H_
@@ -18,7 +20,7 @@
 #include "printstate.h"
 
 /* ai algo selection */
-typedef enum {minimax_ai, alphabeta_ai, ab_iter_ai, eval1_ai, eval2_ai} ai_t;
+typedef enum {minimax_ai, alphabeta_ai, ab_iter_ai, eval1_ai, eval1_iter_ai} ai_t;
 
 /* white/black turn selection */
 typedef enum {white, black} turn_t;
@@ -31,11 +33,11 @@ typedef enum {white, black} turn_t;
 
 /* linked list struct */
 typedef struct node {
- 	uint64_t b_white;
-	uint64_t b_black;
-	int set;	// 0 if not yet set, 1 otherwise
-	int value;		// the eval of this state, if found
-	struct node *next;
+  uint64_t b_white;
+ uint64_t b_black;
+ int set; // 0 if not yet set, 1 otherwise
+ int value;  // the eval of this state, if found
+ struct node *next;
 } list_t, *list_p;
 
 #endif /* AI_H_ */
@@ -45,44 +47,44 @@ typedef struct node {
  * updates the state of the board to reflect the move
  *
  * returns: 1 if AI makes winning move
- 			0 if play continues
- 			-1 if input was a winning state for player 2
+	0 if play continues
+	-1 if input was a winning state for player 2
  */
-int play_ai_turn(	turn_t turn,
-					ai_t ai,
-					uint64_t *bb_1,
-					uint64_t bb_2,
-					uint64_t bits_1[],
-					uint64_t bits_2[],
-					int d_cutoff);
+int play_ai_turn( turn_t turn,
+	 ai_t ai,
+	 uint64_t *bb_1,
+	 uint64_t bb_2,
+	 uint64_t bits_1[],
+	 uint64_t bits_2[],
+	 int d_cutoff);
 
 /* performs recursive minimax algo
  * assumes player 1 is max player
  *
  * @return: 1 if player who starts (turn) wins
- *			0 if its a draw/no winning state is found before cutoff is reached
- *			-1 if player who starts (turn) loses
+ *   0 if its a draw/no winning state is found before cutoff is reached
+ *   -1 if player who starts (turn) loses
  */
 int minimax(int turn,
-			uint64_t bb_1,
-			uint64_t bb_2,
-			uint64_t bits_1[],
-			uint64_t bits_2[],
-			int curr_ply);
+   uint64_t bb_1,
+   uint64_t bb_2,
+   uint64_t bits_1[],
+   uint64_t bits_2[],
+   int curr_ply);
 
 /* performs recursive alphabeta algo
  * assumes player 1 is max player
  *
  * uses evaluation function if the global var speicies to do so
  */
-int alphabeta(	int turn,
-				int alpha,
-				int beta,
-				uint64_t bb_1,
-				uint64_t bb_2,
-				uint64_t bits_1[],
-				uint64_t bits_2[],
-				int curr_ply);
+int alphabeta( int turn,
+	int alpha,
+	int beta,
+	uint64_t bb_1,
+	uint64_t bb_2,
+	uint64_t bits_1[],
+	uint64_t bits_2[],
+	int curr_ply);
 
 /* evalutation function
  * takes the state of the board in individual pieces as input
@@ -101,7 +103,7 @@ int eval1(uint64_t bits_1[], uint64_t bits_2[]);
  *
  * algo adapted from:
  * http://stackoverflow.com/questions/7033165/algorithm-to-check-a-connect-four-field
- * which an algo by John Tromp from http://homepages.cwi.nl/~tromp/c4/fhour.html	
+ * which an algo by John Tromp from http://homepages.cwi.nl/~tromp/c4/fhour.html 
  */
 int check_endgame(uint64_t board);
 
