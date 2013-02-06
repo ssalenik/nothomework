@@ -271,7 +271,7 @@ int main(int argc, char** argv) {
 		printf("\nAI is white, AI starts.  Press any key to start AI turn.");
 		
 
-		while(result != INT_MIN || result != INT_MAX) {
+		while(result == 0) {
 			getchar();	// wait for key to be pressed
 			result = play_ai_turn(ai_turn, ai, &bitboard_white, bitboard_black, white_bits, black_bits, depth_cutoff);
 
@@ -327,6 +327,8 @@ int main(int argc, char** argv) {
 		  				if(inputerr == 0) {
 		  					black_bits[i] = piece;
 		  				}
+		  			} else {
+		  				inputerr++;
 		  			}
 		  			if(inputerr)
 		  				printf("invalid move, try again:\n");
@@ -341,7 +343,7 @@ int main(int argc, char** argv) {
 		// human starts, AI is black
 		printf("AI is black, human starts.  Enter the first move to start.");
 
-		while(result != INT_MIN || result != INT_MAX) {
+		while(result == 0) {
 
 			int bytes_read;
 	  		int nbytes = 5;
@@ -396,6 +398,8 @@ int main(int argc, char** argv) {
 		  				if(inputerr == 0) {
 		  					white_bits[i] = piece;
 		  				}
+		  			} else {
+		  				inputerr++;
 		  			}
 		  			if(inputerr)
 		  				printf("invalid move, try again:\n");
@@ -407,6 +411,12 @@ int main(int argc, char** argv) {
 			result = play_ai_turn(ai_turn, ai, &bitboard_black, bitboard_white, black_bits, white_bits, depth_cutoff);
 		}
 		
+	}
+
+	if(result) {
+		printf("\nAI wins!\n");
+	} else {
+		printf("\nThe winner is YOU!\n");
 	}
 
 	getchar();	
