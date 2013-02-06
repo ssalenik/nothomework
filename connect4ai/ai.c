@@ -110,10 +110,10 @@ int play_ai_turn(	turn_t turn,
 	h = kh_init(64);  // allocate a hash table
 	int* value_p;
 	int* set_p;
-	has_visited_state(*bb_1, bb_2, &set_p, &value_p); // save the initial state
+	//has_visited_state(*bb_1, bb_2, &set_p, &value_p); // save the initial state
 	collisions = 0;
-	states_visited = 0;
-	deepest_ply = 0;
+	states_visited = states_visited_curr_iter = 0;
+	deepest_ply = deepest_ply_curr_iter = 0;
 
 	int util;
 
@@ -153,10 +153,10 @@ int play_ai_turn(	turn_t turn,
 		while(ply_cutoff <= d_cutoff && util != alpha_max && !check_time()) {
 			states_visited_curr_iter = 0;
 			deepest_ply_curr_iter = 0;
-			if(ply_cutoff != 1) {
-				free_hashtable(); //free memory except the first run
-				has_visited_state(*bb_1, bb_2, &set_p, &value_p); // save the initial state
-			}
+			// if(ply_cutoff != 1) {
+			// 	free_hashtable(); //free memory except the first run
+			// 	has_visited_state(*bb_1, bb_2, &set_p, &value_p); // save the initial state
+			// }
 			util = alphabeta(1, beta_min, alpha_max, *bb_1, bb_2, bits_1, bits_2, 0);
 			if(deepest_ply_curr_iter > deepest_ply)
 				deepest_ply = deepest_ply_curr_iter;
@@ -175,10 +175,10 @@ int play_ai_turn(	turn_t turn,
 		while(ply_cutoff <= d_cutoff && util != alpha_max && !check_time()) {
 			states_visited_curr_iter = 0;
 			deepest_ply_curr_iter = 0;
-			if(ply_cutoff != 1) {
-				free_hashtable(); //free memory except the first run
-				has_visited_state(*bb_1, bb_2, &set_p, &value_p); // save the initial state
-			}
+			// if(ply_cutoff != 1) {
+			// 	free_hashtable(); //free memory except the first run
+			// 	has_visited_state(*bb_1, bb_2, &set_p, &value_p); // save the initial state
+			// }
 			util = eval1(1, beta_min, alpha_max, *bb_1, bb_2, bits_1, bits_2, 0);
 			if(deepest_ply_curr_iter > deepest_ply)
 				deepest_ply = deepest_ply_curr_iter;
@@ -189,7 +189,7 @@ int play_ai_turn(	turn_t turn,
 
 		break;
 	case eval2_ai:
-
+		// nothing for now :(
 		break;
 
     }
@@ -227,12 +227,14 @@ int play_ai_turn(	turn_t turn,
 	// free memory
 	delete_hashtable();
 
-	if(util == alpha_max) {
-		return INT_MAX;
-	} else if (util == beta_min) {
-		return INT_MIN;
+	if(util == alpha_max && deepest_ply == 1) {
+		// AI wins
+		return 1;
+	} else if (util == beta_min && deepest_ply == 0) {
+		// other player wins
+		return -1;
 	} else {
-		return util;
+		return 0;
 	}
 
 }
@@ -321,8 +323,6 @@ int has_visited_state(uint64_t bitboard_white, uint64_t bitboard_black, int** se
 		states_visited_curr_iter++;	//incremente states visited count
 		
 		has_visited = 1;
-		//return 1;
-
 	} else {
 		// key already exists, check the state
 		#if DEBUG == 1
@@ -343,16 +343,12 @@ int has_visited_state(uint64_t bitboard_white, uint64_t bitboard_black, int** se
 
 			if( old_list->b_white == bitboard_white && old_list->b_black == bitboard_black) {
 				// same state
-				//#if DEBUG == 1
-				
-				//#endif
-
+				// set will be 1 if the value has already been determined 
 				*set_p = &(old_list->set);
 				*value_p = &(old_list->value);
 
 				has_visited = 0;
-				//printf("found same state: %i\n", has_visited);
-				//return a;
+
 			} else {
 				next_state = old_list->next;
 				if(next_state != NULL) {
@@ -384,16 +380,9 @@ int has_visited_state(uint64_t bitboard_white, uint64_t bitboard_black, int** se
 			collisions++;	// key was the same, but it was a different state
 			states_visited_curr_iter++;	//incremente states visited count
 
-
-			
 			has_visited = 1;	// just to make sure
-			//return 1;
-
 		}
 	}
-
-	//printf("returning: %i", has_visited);
-	//printf("inside: before: %i, after %i, visited: %i\n", weird_before, weird_after, has_visited);
 
 	return has_visited;
 
@@ -412,29 +401,25 @@ int minimax(int turn,
 			uint64_t bits_1[],
 			uint64_t bits_2[],
 			int curr_ply) {
+
+	states_visited_curr_iter++;
+
 	if(turn == 1) {
 		// previous turn was of player 2
 		// check if it was a winning move
 		if(check_endgame(bb_2)) {
 			// player 2 is min
-			//printf("lost\n");
 			return -1;
 		}
 	} else {
 		// previous turn was of player 1
-		int end = check_endgame(bb_1);
-		if(end) {
-			//player 1 is max
-			//printf("won: %i\n", end);
-			//printf("bb1: %llu\n", bb_1);
-			//if(curr_ply == 8)
-			showstate(bits_1, bits_2);
+		if(check_endgame(bb_1)) {
 			return 1;
 		}
 	}
 	// check if we have reached the depth cutoff
 	
-	if (curr_ply == ply_cutoff) {
+	if (curr_ply == ply_cutoff || check_time()) {
 		// depth cutoff, and no winner
 		return 0;
 	}
@@ -442,83 +427,69 @@ int minimax(int turn,
 	if(curr_ply > deepest_ply_curr_iter)
 		deepest_ply_curr_iter = curr_ply;
 
-	check_time();
-
 	int utility; // the result
-	int utility_piece[7]; // utility of each piece
-	int utility_dir[7]; // direction of the utility picked
 	int piece_idx;
 	int dir_idx;
-	
 	int dir;
 	int piece;
 	if(turn == 1){
 		// player 1 moves
 		// player 1 is MAX, player 1 wants the max possible utility
-		utility = -2;
+		utility = beta_min;
 
 		// try the 7 possible pieces
 		for(piece_idx = 0; piece_idx < 7; piece_idx++) {
-			uint64_t bits_dir[4];
-			uint64_t bb_dir[4];			
-			int utility_tmp[4];
+			uint64_t bits_dir;
+			uint64_t bb_dir;			
 			piece = piece_order[piece_idx];
-			utility_piece[piece] = -2; //initial
 
 			// try the 4 possible directions
 			for (dir_idx = 0; dir_idx < 4; dir_idx++) {
 				dir = dir_order[dir_idx];
-				bits_dir[dir] = bits_1[piece];
-				bb_dir[dir] = bb_1;
+				bits_dir = bits_1[piece];
+				bb_dir = bb_1;
 
-				if (trydir(dir, &(bits_dir[dir]), &(bb_dir[dir]), bb_2) == 0) {
+				if (trydir(dir, &bits_dir, &bb_dir, bb_2) == 0) {
 					// possible to move this direction
-					//utility_tmp[dir] = 0; // set to 0, as it is a possible state
+					int utility_tmp;
+
 					// check if state has been visited
 					int* set_p;
 					int* value_p;
 					
-					weird_before++;
-					//printf("before %i\n", weird_before);
-					int visited = has_visited_state(bb_dir[dir], bb_2, &set_p, &value_p);
-					weird_after++;
-					//printf("after %i, visited: %i\n", weird_after, visited);
-					if( visited == 1) {
+					/* note: not currently storing the states */
+					if(1) { // has_visited_state(bb_dir[dir], bb_2, &set_p, &value_p); {
 						// new state!
 						// need a copy of the modified board for each try
 						uint64_t bits_tmp[7];
 						memcpy(bits_tmp, bits_1, 7*sizeof(uint64_t));
-						bits_tmp[piece] = bits_dir[dir];
+						bits_tmp[piece] = bits_dir;
 						// perform minimax on this move
-						utility_tmp[dir] = minimax(2, bb_dir[dir], bb_2, bits_tmp, bits_2, curr_ply);
+						utility_tmp = minimax(2, bb_dir, bb_2, bits_tmp, bits_2, curr_ply);
 						// store the eval of this state and mark it as set
-						*value_p = utility_tmp[dir];
-						*set_p = 1;
-					} else if (visited == 0) {
+						//*value_p = utility_tmp[dir];
+						//*set_p = 1;
+					} else {
 						// state has alreayd been visited
 						// check if the value has been set
 						// if not, its a loop, set val to 0
-						//printf("repeat max\n");
 
 						if(*set_p) {
-							utility_tmp[dir] = *value_p;
-							//if(*value_p == 1)
-								//printf("previously set: %i\n", utility);
+							// the value has been alreayd found by a previous branch
+							utility_tmp = *value_p;
 						} else {
-							utility_tmp[dir] = 0;  // because a loop is effectively a draw
+							// this means we have returned to the same state in the same branch
+							utility_tmp = 0;  // because a loop is effectively a draw
 						}
 					}
-					if(utility_tmp[dir] > utility) {
-
-						utility = utility_tmp[dir];
-						// if(utility == 1)
-						// 	printf("util: %i\n", utility);
-						if(curr_ply == 1) {
+					if(utility_tmp > utility) {
+						utility = utility_tmp;
+						if(curr_ply == 1 && deepest_ply_curr_iter >= deepest_ply) {
 							// make sure we only set the new way to go if this iteration had time to go deeper
 							piece_to_move = piece;
 							dir_to_move = dir;
-							new_piece_position = bits_dir[dir];
-							new_bb = bb_dir[dir];
+							new_piece_position = bits_dir;
+							new_bb = bb_dir;
 						}
 					}
 				}
@@ -529,64 +500,58 @@ int minimax(int turn,
 	} else {
 		// player 2 moves
 		// player 2 is MIN, player 2 wants the min possible utility
-		utility = 2;
+		utility = alpha_max;
 
 		// try the 7 possible pieces
-		int states_tried = 0;
 		for(piece_idx = 0; piece_idx < 7; piece_idx++) {
-			uint64_t bits_dir[4];
-			uint64_t bb_dir[4];			
-			int utility_tmp[4] = {2, 2, 2, 2};
+			uint64_t bits_dir;
+			uint64_t bb_dir;			
 			piece = piece_order[piece_idx];
-
-			utility_piece[piece] = 2; //initial
 
 			// try the 4 possible directions
 			for (dir_idx = 0; dir_idx < 4; dir_idx++) {
 				dir = dir_order[dir_idx];
-				bits_dir[dir] = bits_2[piece];
-				bb_dir[dir] = bb_2;
+				bits_dir = bits_2[piece];
+				bb_dir = bb_2;
 
-				if (trydir(dir, &(bits_dir[dir]), &(bb_dir[dir]), bb_1) == 0) {
+				if (trydir(dir, &bits_dir, &bb_dir, bb_1) == 0) {
 					// possible to move this direction
-					//utility_tmp[dir] = 0; // set to 0, as it is a possible state
+					int utility_tmp;
+
 					// check if state has been visited
 					int* set_p;
 					int* value_p;
-					if(has_visited_state(bb_dir[dir], bb_2, &set_p, &value_p) == 1) {
+
+					/* note: not currently storing the states */
+					if(1) { //has_visited_state(bb_dir[dir], bb_2, &set_p, &value_p) == 1) {
 						// new state!
-						//printf("new min state\n");
 						// need a copy of the modified board for each try
 						uint64_t bits_tmp[7];
 						memcpy(bits_tmp, bits_2, 7*sizeof(uint64_t));
-						bits_tmp[piece] = bits_dir[dir];
+						bits_tmp[piece] = bits_dir;
 						// perform minimax on this move
-						utility_tmp[dir] = minimax(1, bb_1, bb_dir[dir], bits_1, bits_tmp, curr_ply);
+						utility_tmp= minimax(1, bb_1, bb_dir, bits_1, bits_tmp, curr_ply);
 						// store the eval of this state and mark it as set
-						*value_p = utility_tmp[dir];
-						*set_p = 1;
+						//*value_p = utility_tmp;
+						//*set_p = 1;
 					} else {
-						//printf("repeat min, ply: %i\n", curr_ply);
 						// state has alreayd been visited
 						// check if the value has been set
 						// if not, its a loop, set val to 0
 						if(*set_p) {
-							utility_tmp[dir] = *value_p;
+							// the value has been alreayd found by a previous branch
+							utility_tmp = *value_p;
 						} else {
-							utility_tmp[dir] = 0;  // because a loop is effectively a draw
+							// this means we have returned to the same state in the same branch
+							utility_tmp = 0;  // because a loop is effectively a draw
 						}
 					}
-					if(utility_tmp[dir] < utility) {
-						utility = utility_tmp[dir];
+					if(utility_tmp < utility) {
+						utility = utility_tmp;
 					}
 				}
 			}
 		}
-		// if(utility > 1 || utility < -1) {
-		// 	printf("uitl > 1, wut? - %i, %i, %i, %i, %i, %i, %i\n", utility_piece[0], utility_piece[1], utility_piece[2], utility_piece[3], utility_piece[4], utility_piece[5], utility_piece[6]);
-		// 	printf("states tried: %i\n", states_tried);
-		// 	showstate(bits_1, bits_2);
-		// }
 		return utility;
 	}
 }
@@ -606,23 +571,20 @@ int alphabeta(	int turn,
 				uint64_t bits_1[],
 				uint64_t bits_2[],
 				int curr_ply) {
+
+	states_visited_curr_iter++;
+
 	if(turn == 1) {
 		// previous turn was of player 2
 		// check if it was a winning move
 		if(check_endgame(bb_2)) {
 			// player 2 is min
-			//printf("lost\n");
 			return -1;
 		}
 	} else {
 		// previous turn was of player 1
-		int end = check_endgame(bb_1);
-		if(end) {
+		if(check_endgame(bb_1)) {
 			//player 1 is max
-			//printf("won: %i\n", end);
-			//printf("bb1: %llu\n", bb_1);
-			//showstate(bits_1, bits_2);
-
 			return 1;
 		}
 	}
@@ -636,8 +598,6 @@ int alphabeta(	int turn,
 	if(curr_ply > deepest_ply_curr_iter)
 		deepest_ply_curr_iter = curr_ply;
 
-	
-
 	int utility; // the result
 	int piece_idx;
 	int dir_idx;
@@ -647,7 +607,6 @@ int alphabeta(	int turn,
 		// player 1 moves
 		// player 1 is MAX, player 1 wants the max possible utility
 		utility = beta_min;
-
 
 		// try the 7 possible pieces
 		for(piece_idx = 0; piece_idx < 7; piece_idx++) {
@@ -662,29 +621,13 @@ int alphabeta(	int turn,
 				bits_dir[dir] = bits_1[piece];
 				bb_dir[dir] = bb_1;
 
-				
-				// if(piece == 4 )
-				// 	printf("dir: %i, alpha: %i, beta: %i\n", dir, alpha, beta);
-
-
-
 				if (trydir(dir, &(bits_dir[dir]), &(bb_dir[dir]), bb_2) == 0) {
 					// possible to move this direction
-					//alpha_tmp[dir] = 0; // set to 0, as it is a possible state
-					// check if state has been visited
-					uint64_t bits_show[7];
-					memcpy(bits_show, bits_1, 7*sizeof(uint64_t));
-					bits_show[piece] = bits_dir[dir];
-					// if((piece == 3 || piece == 5 || piece == 6) && curr_ply == 3) {
-					// 	if(check_endgame(bb_dir[dir]))
-					// 		showstate(bits_show, bits_2);
-					// }
-
 					int utility_tmp;
-
 					// check if state has been visited
 					int* set_p;
 					int* value_p;
+					/* note: not currently sotring the states */
 					if(1) { //has_visited_state(bb_dir[dir], bb_2, &set_p, &value_p) == 1) {
 						// new state!
 						// need a copy of the modified board for each try
@@ -705,9 +648,6 @@ int alphabeta(	int turn,
 						} else {
 							utility_tmp = 0;  // because a loop is effectively a draw
 						}
-
-						// if(check_endgame(bb_dir[dir]))
-						// 	printf("win state util: %i\n", utility_tmp);
 					}	
 					// check alpha value
 					if(utility_tmp > utility) {
@@ -715,7 +655,6 @@ int alphabeta(	int turn,
 						utility = utility_tmp;
 
 						if(curr_ply == 1 && deepest_ply_curr_iter >= deepest_ply) {
-							//printf("move: util: %i\n", utility);
 							// make sure we only set the new way to go if this iteration had time to go deeper
 							piece_to_move = piece;
 							dir_to_move = dir;
@@ -726,33 +665,22 @@ int alphabeta(	int turn,
 				}				
 				// break if we have reached max possible alpha
 				// or if beta is less than or qual to alpha
-				if(utility == alpha_max || utility >= beta) { //(utility >= beta  && utility != 0)) {
-					//printf("util: %i, alpha: %i, beta: %i, piece: %i, dir: %i\n", utility, alpha, beta, piece, dir);
+				if(utility >= beta) {
 					break;
 				}
-				if(utility > alpha )// && utility != 0)
+				if(utility > alpha )
 					alpha = utility;
 			}
 			// break if we have reached max possible alpha
 			// or if beta is less than or qual to alpha
-			if(utility == alpha_max || utility >= beta) //(utility >= beta && utility != 0))
+			if(utility >= beta)
 				break;
 		}
-		// if(curr_ply == 3)
-		// 	printf("%i, ", utility);
-		// if(utility  == 1)
-		// 	printf("uitl= 1 - %i, %i, %i, %i, %i, %i, %i\n", utility_piece[0], utility_piece[1], utility_piece[2], utility_piece[3], utility_piece[4], utility_piece[5], utility_piece[6]);
 		return utility;
-		
 	} else {
 		// player 2 moves
 		// player 2 is MIN, player 2 wants the min possible utility
 		utility = alpha_max;
-		int beta_tmp[4] = {alpha_max, alpha_max, alpha_max, alpha_max};
-
-		// if(curr_ply == 2)
-		// 	printf("alpha: %i, beta: %i\n", alpha, beta);
-
 
 		// try the 7 possible pieces
 		int states_tried = 0;
@@ -769,18 +697,12 @@ int alphabeta(	int turn,
 				bb_dir[dir] = bb_2;
 
 				if (trydir(dir, &(bits_dir[dir]), &(bb_dir[dir]), bb_1) == 0) {
-					//printf("before: %llu, after %llu\n", bits_2[piece], bits_dir[dir]);
 					// possible to move this direction
-					uint64_t bits_show[7];
-					memcpy(bits_show, bits_2, 7*sizeof(uint64_t));
-					bits_show[piece] = bits_dir[dir];
-					//showstate(bits_1, bits_show);
-					//beta_tmp[dir] = 0; // set to 0, as it is a possible state
-					// check if state has been visited
-
 					int utility_tmp;
+					// check if state has been visited
 					int* set_p;
 					int* value_p;
+					/* note: not currently storing states */
 					if(1) { //has_visited_state(bb_dir[dir], bb_2, &set_p, &value_p) == 1) {
 						// new state!
 						// need a copy of the modified board for each try
@@ -788,7 +710,6 @@ int alphabeta(	int turn,
 						memcpy(bits_tmp, bits_2, 7*sizeof(uint64_t));
 						bits_tmp[piece] = bits_dir[dir];
 						// perform minimax on this move
-
 						utility_tmp = alphabeta(1, alpha, beta, bb_1, bb_dir[dir], bits_1, bits_tmp, curr_ply);
 						// store the eval of this state and mark it as set
 						// *value_p = utility_tmp;
@@ -811,20 +732,17 @@ int alphabeta(	int turn,
 				}
 				// break if we have reached min possible beta
 				// or if beta is less than or qual to alpha
-				if(utility == beta_min || utility <= alpha) {//(utility <= alpha  && utility != 0)) {
-					//printf("util: %i, alpha: %i, beta: %i, piece: %i, dir: %i\n", utility, alpha, beta, piece, dir);
+				if(utility <= alpha) {
 					break;
 				}
-				if(utility < beta )//&& utility != 0)
+				if(utility < beta )
 					beta = utility;
 			}
 			// break if we have reached min possible beta
 			// or if beta is less than or qual to alpha
-			if(utility  == beta_min || utility <=alpha) //(utility <=alpha && utility != 0))
+			if(utility <= alpha)
 				break;
 		}
-		// if(curr_ply == 2)
-		// 	printf("\nmin: %i\n", utility);
 		return utility;
 	}
 }

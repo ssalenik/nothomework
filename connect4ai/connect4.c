@@ -19,10 +19,8 @@
 uint64_t bitboard_white = 0;	// the entire white board
 uint64_t bitboard_black = 0;	// the entire black board
 
-// uint64_t white_bits[7] = {1,1,1,1,1,1,1};	// position of individual white pieces
-// uint64_t black_bits[7] = {1,1,1,1,1,1,1};	// position of individual black pieces
-uint64_t white_bits[7] = {1,128,16384,2097152,268435456,34359738368,4398046511104};	// position of individual white pieces
-uint64_t black_bits[7] = {64,8192,1048576,134217728,17179869184,2199023255552,281474976710656};	// position of individual black pieces
+uint64_t white_bits[7] = {1,1,1,1,1,1,1};	// position of individual white pieces
+uint64_t black_bits[7] = {1,1,1,1,1,1,1};	// position of individual black pieces
 
 /* prints the help */
 int printhelp() {
@@ -45,8 +43,6 @@ int printhelp() {
 
 	return 0;
 }
-
-
 
 /* gets input from user */
 int getinput() {
@@ -159,16 +155,6 @@ int parsefile(char *ifile) {
 	return 0;
 }
 
-/* validates entered move */
-int validatemove() {
-	return 0;
-}
-/* changes game state to reflect move*/
-int executemove() {
-
-	return 0;
-}
-
 int main(int argc, char** argv) {
 	int c;
     int errflg = 0, fflg = 0;
@@ -180,8 +166,6 @@ int main(int argc, char** argv) {
     int depth_cutoff = 30; 	// the default search depth cut-off
 
     turn_t ai_turn = white;	// the default first turn is white
-
-    struct timeval tvBegin, tvEnd, tvDiff;	// for time keeping
 
 	/* parse command line args */
 	while ((c = getopt(argc, argv, "wbh12345d:f:")) != -1) {
@@ -270,10 +254,11 @@ int main(int argc, char** argv) {
 		// AI starts
 		printf("\nAI is white, AI starts.  Press any key to start AI turn.");
 		
+		getchar();	// wait for key to be pressed
+		result = play_ai_turn(ai_turn, ai, &bitboard_white, bitboard_black, white_bits, black_bits, depth_cutoff);
 
 		while(result == 0) {
-			getchar();	// wait for key to be pressed
-			result = play_ai_turn(ai_turn, ai, &bitboard_white, bitboard_black, white_bits, black_bits, depth_cutoff);
+			
 
 			int bytes_read;
 	  		int nbytes = 5;
@@ -285,7 +270,7 @@ int main(int argc, char** argv) {
 
 	  		while(inputerr != 0) {
 	  			inputerr = 0;
-		  		bytes_read = getline(&user_input, &nbytes, stdin);
+		  		bytes_read = getline(&user_input, (size_t*)&nbytes, stdin);
 		  		if(bytes_read == -1)
 		  			inputerr++;
 		  		user_x = (int)user_input[0] - 48;
@@ -337,6 +322,7 @@ int main(int argc, char** argv) {
 
 		  	showstate(white_bits, black_bits);
 		  	printf("\nAI turn\n");
+		  	result = play_ai_turn(ai_turn, ai, &bitboard_white, bitboard_black, white_bits, black_bits, depth_cutoff);
 		}
 
 	} else {
@@ -356,7 +342,7 @@ int main(int argc, char** argv) {
 
 	  		while(inputerr != 0) {
 	  			inputerr = 0;
-		  		bytes_read = getline(&user_input, &nbytes, stdin);
+		  		bytes_read = getline(&user_input, (size_t*)&nbytes, stdin);
 		  		if(bytes_read == -1)
 		  			inputerr++;
 		  		user_x = (int)user_input[0] - 48;
@@ -406,14 +392,13 @@ int main(int argc, char** argv) {
 		  		}
 		  	}
 		  	showstate(white_bits, black_bits);
-			getchar();
 			printf("\nAI turn\n");
 			result = play_ai_turn(ai_turn, ai, &bitboard_black, bitboard_white, black_bits, white_bits, depth_cutoff);
 		}
 		
 	}
 
-	if(result) {
+	if(result == 1) {
 		printf("\nAI wins!\n");
 	} else {
 		printf("\nThe winner is YOU!\n");
