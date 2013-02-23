@@ -29,8 +29,12 @@ print_table(Q1_1.to_arrows(pi_val))
 print ""
 print "policy iteration"
 print "----------------"
+print "state utilities:"
+pi_poli, util = policy_iteration(Q1_1)
+for val in util:
+	# increment each index, since we index from 0 in the program
+	print "(%i,%i): %r" % (val[0] + 1, val[1] + 1, util[val])
 print "policy:"
-pi_poli = policy_iteration(Q1_1)
 print_table(Q1_1.to_arrows(pi_val))
 
 

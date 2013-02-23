@@ -1,3 +1,12 @@
+# This code is taken from the aima-python lib found here:
+# https://code.google.com/p/aima-python/
+# it is released under the MIT liscence:
+# http://opensource.org/licenses/mit-license.php
+#
+# some modifications have been made for the purposes of the assignment
+#
+# Stepan Salenikovich - Feb 23, 2013
+
 """Markov Decision Processes (Chapter 17)
 
 First we define an MDP, and the special case of a GridMDP, in which
@@ -128,7 +137,8 @@ def policy_iteration(mdp):
                 pi[s] = a
                 unchanged = False
         if unchanged:
-            return pi
+            # modified to return both the policy and the state utilites
+            return pi, U
 
 def policy_evaluation(pi, U, mdp, k=20):
     """Return an updated utility mapping U from each state in the MDP to its
