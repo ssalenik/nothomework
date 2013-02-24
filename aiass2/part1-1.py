@@ -1,13 +1,12 @@
 
 from mdp import *
 
+"""Part I"""
 
-"""Part I
+"""question 1"""
 
-	question 1
-"""
 
-Q1_1 = GridMDP([[-0.04, -0.04, -0.04, -0.04],
+Q1_1 = GridMDP([[-0.04, -0.04, None, -0.04],
 				[-0.04, -0.04, -0.04, -0.04],
             	[-0.04, None,  -0.04, -1],
                	[-0.04, -0.04, -0.04, +1]],
@@ -36,5 +35,4 @@ for val in util:
 	print "(%i,%i): %r" % (val[0] + 1, val[1] + 1, util[val])
 print "policy:"
 print_table(Q1_1.to_arrows(pi_val))
-
 
