@@ -8,6 +8,11 @@ Q4
 """
 
 # extending the MDP class to solve the kangaroo world problem
+# ECSE 526
+# Assignment 2
+# Stepan Salenikovich
+# Feb 27, 2013
+
 class KangarooMDP(MDP):
     """A two-dimensional MDP, where the first dimension represents the position in
     the world and the second the jump vector used to get to that position.

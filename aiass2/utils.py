@@ -1,3 +1,10 @@
+# This code is taken from the aima-python lib found here:
+# https://code.google.com/p/aima-python/
+# it is released under the MIT liscence:
+# http://opensource.org/licenses/mit-license.php
+#
+# Stepan Salenikovich - Feb 26, 2013
+
 """Provide some widely useful utilities. Safe for "from utils import *".
 
 """

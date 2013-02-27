@@ -1,3 +1,8 @@
+# ECSE 526
+# Assignment 2
+# Stepan Salenikovich
+# Feb 27, 2013
+
 import numpy as np
 
 print """
