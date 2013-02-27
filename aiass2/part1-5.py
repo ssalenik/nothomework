@@ -1,9 +1,11 @@
 import numpy as np
 from mdp import *
 
-"""Part I"""
+print """
 
-"""question 5"""
+Q5
+---------------
+"""
 increment = 0.5	# the amount by which r will be incrmented
 
 # init r with the given increment
@@ -39,6 +41,8 @@ while r[i] < -1.0:
 	i += 1
 pi_val = best_policy(world[i], u[i])
 print_table(world[i].to_arrows(pi_val))
+
+print "---------------"
 
 # state (3,2), (2,1), (4,4)
 y = [[],[],[]]

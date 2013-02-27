@@ -1,6 +1,12 @@
 from utils import *
 from mdp import *
 
+print """
+part II
+Q4
+---------------
+"""
+
 # extending the MDP class to solve the kangaroo world problem
 class KangarooMDP(MDP):
     """A two-dimensional MDP, where the first dimension represents the position in
@@ -80,7 +86,6 @@ class KangarooMDP(MDP):
         return (position, self.jv_to_row[vector])
 
     def to_grid(self, mapping):
-        """Convert a mapping from (x, y) to v into a [[..., v, ...]] grid."""
         return list(reversed([[mapping.get((x,y), None)
                                for x in range(self.rows)]
                               for y in range(self.cols)]))

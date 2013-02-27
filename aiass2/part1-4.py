@@ -1,6 +1,10 @@
 import numpy as np
 
-"""question 4"""
+print """
+
+Q4
+---------------
+"""
 increment = 0.5	# the amount by which r will be incrmented
 
 # init r with the given increment
