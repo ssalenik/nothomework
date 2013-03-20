@@ -11,7 +11,7 @@ Q4
 # ECSE 526
 # Assignment 2
 # Stepan Salenikovich
-# Feb 27, 2013
+# Feb 26, 2013
 
 class KangarooMDP(MDP):
     """A two-dimensional MDP, where the first dimension represents the position in
