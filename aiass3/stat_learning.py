@@ -14,9 +14,11 @@ def norm_pdf_multivariate(x, mu, sigma):
 			print "det = %f" % det
 			raise NameError("The covariance matrix can't be singular and must be positive definite")
 		norm_const = 1.0/ ( math.pow((2*math.pi),float(size)/2) * math.pow(det,1.0/2))
-		x_mu = matrix(x - mu)
+		#x_mu = matrix(x - mu)
+		x_mu = x - mu
 		inv = sigma.I        
-		result = math.pow(math.e, -0.5 * (x_mu * inv * x_mu.T))
+		#result = math.pow(math.e, -0.5 * (x_mu * inv * x_mu.T))
+		result = math.pow(math.e, -0.5 * (x_mu * inv * reshape(x_mu, (size, 1))))
 		return norm_const * result
 	else:
 		raise NameError("The dimensions of the input don't match")
@@ -30,7 +32,7 @@ def log_likelyhood(x, mu, sigma):
 		if det <= 0:
 			print "det = %f" % det
 			raise NameError("The covariance matrix can't be singular and must be positive definite")
-		term1 = -size/2 * math.log(2*math.pi)
+		term1 = -size/2.0 * math.log(2*math.pi)
 		term2 = -0.5 * math.log(det)
 		inv = sigma.I 
 		x_mu = matrix(x - mu)
