@@ -20,6 +20,6 @@ def translate_1_to_20(value):
 def set_lower_bound(matrix, bound):
 	for e in np.nditer(matrix, op_flags=['readwrite']):
 		if e < 0. and -e < bound :
-			e[...] = -bound
+			e[...] = 0.
 		elif e > 0. and e < bound:
-			e[...] = bound
+			e[...] = 0.

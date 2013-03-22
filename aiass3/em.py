@@ -207,6 +207,9 @@ for step in range(10):
 		# finish sigma calc
 		cluster_curr[cluster]["covar"] = cluster_curr[cluster]["covar"]/cluster_curr[cluster]["n"]
 
+		# make sure vals don't get too small
+		# set_lower_bound(cluster_curr[cluster]["covar"], 0.0001)
+
 		# finally, update weight
 		cluster_curr[cluster]["weight"] = cluster_curr[cluster]["n"] / float(num_pixels)
 
