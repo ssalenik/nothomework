@@ -10,7 +10,7 @@ def norm_pdf_multivariate(x, mu, sigma):
 	shape = (size, size)
 	if (size == len(mu)) and ((size, size) == sigma.shape):
 		det = linalg.det(sigma)
-		if det == 0:
+		if det <= 0:
 			print "det = %f" % det
 			print sigma
 			raise NameError("The covariance matrix can't be singular and must be positive definite")
@@ -29,12 +29,15 @@ def norm_pdf_multivariate(x, mu, sigma):
 def log_likelyhood(x, mu, sigma):
 	size = len(x)
 	if size == len(mu) and (size, size) == sigma.shape:
-		det = linalg.det(sigma)
-		if det == 0:
-			print "det = %f" % det
+		# det = linalg.det(sigma)
+		# if det <= 0:
+		# 	print "det = %f" % det
+		# 	raise NameError("The covariance matrix can't be singular and must be positive definite")
+		sign, logdet = linalg.slogdet(sigma)
+		if sign == 0:
 			raise NameError("The covariance matrix can't be singular and must be positive definite")
 		term1 = -size/2.0 * math.log(2*math.pi)
-		term2 = -0.5 * math.log(det)
+		term2 = -0.5 * sign * logdet
 		inv = sigma.I 
 		x_mu = matrix(x - mu)
 		term3 = -0.5 * (x_mu * inv * x_mu.T)

@@ -34,16 +34,21 @@ def plot_cov_ellipse(cov, pos, ax=None, **kwargs):
     vals, vecs = eigsorted(cov)
     theta = np.degrees(np.arctan2(*vecs[:,0][::-1]))
 
-    # first the inner std = 1 dashed ellipse
-    # Width and height are "full" widths, not radius
-    width, height = 2 * np.sqrt(vals)
-    ellip1 = Ellipse(xy=pos, width=width, height=height, angle=theta, color='c', fill=False, linestyle='dashed')
-
-    # then the outter std = 2 ellipse
+    # first the inner std = 2 dashed ellipse
     # Width and height are "full" widths, not radius
     width, height = 2 * 2 * np.sqrt(vals)
+    ellip1 = Ellipse(xy=pos, width=width, height=height, angle=theta, color='c', fill=False, linestyle='dashed')
+
+    # then the outter std = 10 ellipse
+    # Width and height are "full" widths, not radius
+    width, height = 2 * 10 * np.sqrt(vals)
     ellip2 = Ellipse(xy=pos, width=width, height=height, angle=theta, color='c', fill=False)
+
+    # Width and height are "full" widths, not radius
+    width, height = 2 * 15 * np.sqrt(vals)
+    ellip3 = Ellipse(xy=pos, width=width, height=height, angle=theta, color='c', fill=False)
 
     ax.add_artist(ellip1)
     ax.add_artist(ellip2)
+    ax.add_artist(ellip3)
     return ellip2

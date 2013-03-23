@@ -4,6 +4,7 @@ import matplotlib.image as mpimg
 import numpy as np
 import math
 from copy import deepcopy
+import math
 
 from cov_ellipse import *
 from stat_learning import *
@@ -13,7 +14,9 @@ default_image_location = "images/image1_a.png"
 
 parser = argparse.ArgumentParser()
 parser.add_argument("image", nargs='?', default=default_image_location, help="location of the image; default image used otherwise")
+parser.add_argument("-i", default=10, type=int, required=False, help="number of itterations to try")
 image_location = parser.parse_args().image
+itterations = parser.parse_args().i
 
 print "using image: %s" % image_location
 
@@ -31,7 +34,6 @@ img_x_lim = len(img[0])
 num_pixels = img_y_lim * img_x_lim
 
 # set starting params of clusters
-num_clusters = 4
 cluster_init = {}	# init cluster dict
 
 # each pixel is [R G B X Y]
@@ -46,7 +48,9 @@ cluster_init = {}	# init cluster dict
 
 # red cluster
 red_cluster = {}
-mu = np.array([1., 0., 0., translate_20_to_1(14.), translate_20_to_1(14.)]) # init the color as pure red
+mu = np.array([1., 0., 0., translate_20_to_1(14.), translate_20_to_1(14.)]) # good init
+# mu = np.array([1., 0., 0., translate_20_to_1(8.), translate_20_to_1(14.)]) # bad x,y init
+# mu = np.array([.5, .5, .5, translate_20_to_1(14.), translate_20_to_1(14.)]) # grey init
 # sigma = np.matrix([[1.0, 0.9, 0.9, 0.9, 0.9],
 # 				   [0.9, 1.0, 0.9, 0.9, 0.9],
 # 				   [0.9, 0.9, 1.0, 0.9, 0.9],
@@ -60,7 +64,9 @@ cluster_init["red"] = red_cluster # add the red_cluster dict to our dict of clus
 
 # blue cluster
 blue_cluster = {}
-mu = np.array([0., 0., 1., translate_20_to_1(2.), translate_20_to_1(15.)]) # init the color as pure blue
+mu = np.array([0., 0., 1., translate_20_to_1(3.), translate_20_to_1(14.)]) # init the color as pure blue
+# mu = np.array([0., 0., 1., translate_20_to_1(6.), translate_20_to_1(14.)]) # init the color as pure blue
+# mu = np.array([.5, .5, .5, translate_20_to_1(3.), translate_20_to_1(14.)]) # init the color as pure blue
 # sigma = np.matrix([[1.0, 0., 0., 0., 0.],
 # 				   [0., 1.0, 0., 0., 0.],
 # 				   [0., 0., 1.0, 0., 0.],
@@ -75,6 +81,8 @@ cluster_init["blue"] = blue_cluster # add the blue_cluster dict to our dict of
 # black cluster
 black_cluster = {}
 mu = np.array([0., 0., 0., translate_20_to_1(8.), translate_20_to_1(7.)]) # init the color as pure black
+# mu = np.array([0., 0., 0., translate_20_to_1(7.), translate_20_to_1(12.)]) # init the color as pure black
+# mu = np.array([.5, .5, .5, translate_20_to_1(8.), translate_20_to_1(7.)]) # init the color as pure black
 # sigma = np.matrix([[1.0, 0., 0., 0., 0.],
 # 				   [0., 1.0, 0., 0., 0.],
 # 				   [0., 0., 1.0, 0., 0.],
@@ -88,7 +96,9 @@ cluster_init["black"] = black_cluster # add the black_cluster dict to our dict o
 
 # white cluster
 white_cluster = {}
-mu = np.array([1., 1., 1., translate_20_to_1(16.), translate_20_to_1(.5)]) # init the color as pure white
+mu = np.array([1., 1., 1., translate_20_to_1(17.), translate_20_to_1(1.)]) # init the color as pure white
+# mu = np.array([1., 1., 1., translate_20_to_1(12.), translate_20_to_1(7.)]) # init the color as pure white
+# mu = np.array([.5, .5, .5, translate_20_to_1(17.), translate_20_to_1(1.)]) # init the color as pure white
 # sigma = np.matrix([[1.0, 0., 0., 0., 0.],
 # 				   [0., 1.0, 0., 0., 0.],
 # 				   [0., 0., 1.0, 0., 0.],
@@ -99,6 +109,38 @@ white_cluster["mean"] = mu
 # white_cluster["covar"] = sigma
 white_cluster["weight"] = 1.0/num_clusters
 cluster_init["white"] = white_cluster # add the white_cluster dict to our dict of clusters
+
+# 2nd white cluster
+white_cluster = {}
+mu = np.array([1., 1., 1., translate_20_to_1(2.), translate_20_to_1(1.)]) # init the color as pure white
+# mu = np.array([1., 1., 1., translate_20_to_1(12.), translate_20_to_1(7.)]) # init the color as pure white
+# mu = np.array([.5, .5, .5, translate_20_to_1(17.), translate_20_to_1(1.)]) # init the color as pure white
+# sigma = np.matrix([[1.0, 0., 0., 0., 0.],
+# 				   [0., 1.0, 0., 0., 0.],
+# 				   [0., 0., 1.0, 0., 0.],
+# 				   [0., 0., 0., 4.0, 0.0],
+# 				   [0., 0., 0., 0.0, 4.0]])
+
+white_cluster["mean"] = mu
+# white_cluster["covar"] = sigma
+white_cluster["weight"] = 1.0/num_clusters
+# cluster_init["white2"] = white_cluster # add the white_cluster dict to our dict of clusters
+
+# 2nd red cluster
+red_cluster = {}
+mu = np.array([1., 0., 0., translate_20_to_1(10.), translate_20_to_1(17.)]) # good init
+# mu = np.array([1., 0., 0., translate_20_to_1(8.), translate_20_to_1(14.)]) # bad x,y init
+# mu = np.array([.5, .5, .5, translate_20_to_1(14.), translate_20_to_1(14.)]) # grey init
+# sigma = np.matrix([[1.0, 0.9, 0.9, 0.9, 0.9],
+# 				   [0.9, 1.0, 0.9, 0.9, 0.9],
+# 				   [0.9, 0.9, 1.0, 0.9, 0.9],
+# 				   [0.9, 0.9, 0.9, 4.0, 0.90],
+# 				   [0.9, 0.9, 0.9, 0.9, 4.0]])
+
+red_cluster["mean"] = mu
+#red_cluster["covar"] = sigma
+red_cluster["weight"] = 1.0/num_clusters
+# cluster_init["red2"] = red_cluster # add the red_cluster dict to our dict of clusters
 
 # init covar with estimate
 for cluster in cluster_init:
@@ -117,16 +159,20 @@ for cluster in cluster_init:
 	# finish sigma calc
 	cluster_init[cluster]["covar"] = cluster_init[cluster]["covar"]/(num_pixels - 1)
 
-	print cluster_init[cluster]["covar"]
+	# print cluster_init[cluster]["covar"]
 
 
 log_likelyhood_curr = 0	# init log likelyhood
 cluster_curr = deepcopy(cluster_init)	# init current cluster vals to the initial ones
 p = [[{} for x in range(img_x_lim)] for y in range(img_y_lim)] # init p matrix which is a matrix of pij vals corresponding to each pixel in the image
 
-for step in range(10):
+for step in range(itterations):
 	log_likelyhood_prev = log_likelyhood_curr # save the previous result for comparison later
 	log_likelyhood_curr = 0.
+
+	# save previoius itteration results
+	cluster_prev = deepcopy(cluster_curr)
+	p_prev = deepcopy(p)
 
 	# E-step
 	
@@ -146,7 +192,7 @@ for step in range(10):
 				# get the probability by calculating the pdf
 				prob_x_given_c[cluster] = norm_pdf_multivariate(sample, cluster_curr[cluster]["mean"], cluster_curr[cluster]["covar"])
 				# while we're here, calculate the log likelyhood
-				log_likelyhood_curr += log_likelyhood(sample, cluster_curr[cluster]["mean"], cluster_curr[cluster]["covar"])
+				# log_likelyhood_curr += log_likelyhood(sample, cluster_curr[cluster]["mean"], cluster_curr[cluster]["covar"])
 
 			# get the denominator in the Bayes' rule calc
 			denominator = 0.
@@ -169,9 +215,6 @@ for step in range(10):
 	# 	total += cluster_curr[cluster]["n"]
 	# 	print "%s : %f" % (cluster, cluster_curr[cluster]["n"])
 	# print "total %f" % total
-
-	# print log likelyhood
-	print "step %d log likelyhood %f" % (step, log_likelyhood_curr)
 
 	# M-step
 	# for every cluster
@@ -217,18 +260,47 @@ for step in range(10):
 		# print "%s:" % cluster
 		# print cluster_curr[cluster]["mean"]
 		# print cluster_curr[cluster]["covar"]
-		if cluster == "black" :
-			print cluster_curr[cluster]["mean"]
 
+	# check determinant
+	for cluster in cluster_curr:
+		det = np.linalg.det(cluster_curr[cluster]["covar"])
+		# print "%s: %f" % (cluster, det)
+		if det <= .0:
+			print "%s det too small, reseting covariance" % cluster
+			# cluster_curr[cluster]["mean"] = cluster_init[cluster]["mean"]
+			cluster_curr[cluster]["covar"] = cluster_init[cluster]["covar"]
 
+	# get the new log likelyhood
+	# for every pixel
+	for y in range(img_y_lim):
+		for x in range(img_x_lim):
+			l = -99999.
+			for cluster in cluster_curr:
+				sample_l = log_likelyhood(sample, cluster_curr[cluster]["mean"], cluster_curr[cluster]["covar"])
+				if sample_l > l :
+					l = sample_l
+					w = cluster_curr[cluster]["weight"]
 
+			log_likelyhood_curr += math.log(w) + l
+
+	# check to make sure log likelyhood is still increasing
+	# if log_likelyhood_curr < log_likelyhood_prev and step != 0:
+	# 	print "max log likelyhood reached, stopping"
+	# 	cluster_curr = cluster_prev
+	# 	p = p_prev
+	# 	break
+
+	# print log likelyhood
+	print "step %d log likelyhood %f" % (step + 1, log_likelyhood_curr)
+
+plt.subplot(121)
 imgplot = plt.imshow(img)	# create plot
 imgplot.set_interpolation('nearest') # we don't want interpolation so edges of pixels aren't "blurry"
 
 for cluster in cluster_init:
 	x = translate_1_to_20(cluster_init[cluster]["mean"][3])
 	y = translate_1_to_20(cluster_init[cluster]["mean"][4])
-	plt.plot(x,y, marker='o', color='b', markersize=15, label="initial mean")
+	plt.plot(x,y, marker='o', color='b', markersize=10, label="initial mean")
 
 	# cov = cluster_init[cluster]["covar"][3:,3:]
 	# plot_cov_ellipse(cov, np.array([x,y]))
@@ -247,13 +319,25 @@ for cluster in cluster_curr:
 plt.ylim([img_y_lim - 1,0])
 plt.xlim([0,img_x_lim - 1])
 
-# cov = np.matrix([[4., 0.], [0., 4.]])
-# pos = np.array([7,7])
+# results
+img_result = deepcopy(img)
 
-# plot_cov_ellipse(cov, pos)
+# for every pixel
+for y in range(img_y_lim):
+	for x in range(img_x_lim):
+		pij_max = 0
+		for cluster in cluster_curr:
+			pij = p[y][x][cluster]
+			if pij > pij_max:
+				pij_max = pij
+				new_color = cluster_curr[cluster]["mean"][:3]
+		img_result[y][x] = new_color
 
-# pos = np.array([15,15])
+plt.subplot(122)
+plt.ylim([img_y_lim - 1,0])
+plt.xlim([0,img_x_lim - 1])
 
-# plot_cov_ellipse(cov, pos)
+imgplot_result = plt.imshow(img_result)	# create plot
+imgplot_result.set_interpolation('nearest') # we don't want interpolation so edges of pixels aren't "blurry"
 
 plt.show()	# show plot
