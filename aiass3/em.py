@@ -35,6 +35,7 @@ num_pixels = img_y_lim * img_x_lim
 
 # set starting params of clusters
 cluster_init = {}	# init cluster dict
+num_clusters = 4
 
 # each pixel is [R G B X Y]
 # mean is [R G B X Y]
