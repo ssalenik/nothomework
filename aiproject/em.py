@@ -35,7 +35,7 @@ num_pixels = img_y_lim * img_x_lim
 
 # set starting params of clusters
 cluster_init = {}	# init cluster dict
-num_clusters = 6
+num_clusters = 4
 
 # each pixel is [R G B X Y]
 # mean is [R G B X Y]
@@ -125,7 +125,7 @@ mu = np.array([1., 1., 1., translate_20_to_1(2.), translate_20_to_1(1.)]) # init
 white_cluster["mean"] = mu
 # white_cluster["covar"] = sigma
 white_cluster["weight"] = 1.0/num_clusters
-cluster_init["white2"] = white_cluster # add the white_cluster dict to our dict of clusters
+# cluster_init["white2"] = white_cluster # add the white_cluster dict to our dict of clusters
 
 # 2nd red cluster
 red_cluster = {}
@@ -141,7 +141,7 @@ mu = np.array([1., 0., 0., translate_20_to_1(10.), translate_20_to_1(17.)]) # go
 red_cluster["mean"] = mu
 #red_cluster["covar"] = sigma
 red_cluster["weight"] = 1.0/num_clusters
-cluster_init["red2"] = red_cluster # add the red_cluster dict to our dict of clusters
+# cluster_init["red2"] = red_cluster # add the red_cluster dict to our dict of clusters
 
 # init covar with estimate
 for cluster in cluster_init:
